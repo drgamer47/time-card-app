@@ -2,7 +2,40 @@
 
 ## Quick Deploy
 
-### First Time Setup
+### Option 1: GitHub Auto-Deploy (Recommended)
+
+1. **Go to Vercel Dashboard**
+   - Visit [vercel.com](https://vercel.com)
+   - Sign in with GitHub
+
+2. **Import Repository**
+   - Click "Add New Project"
+   - Select `drgamer47/time-card-app`
+   - Click "Import"
+
+3. **Configure Project**
+   - Framework Preset: **Vite**
+   - Build Command: `npm run build` (auto-detected)
+   - Output Directory: `dist` (auto-detected)
+   - Install Command: `npm install` (auto-detected)
+
+4. **Set Environment Variables**
+   - Click "Environment Variables"
+   - Add:
+     - `VITE_SUPABASE_URL` = your Supabase URL
+     - `VITE_SUPABASE_ANON_KEY` = your Supabase anon key
+   - Click "Save"
+
+5. **Deploy**
+   - Click "Deploy"
+   - Wait for build to complete
+   - Get your URL: `https://time-card-app.vercel.app`
+
+6. **Auto-Deploy Enabled**
+   - Every push to `main` auto-deploys
+   - Preview deployments for PRs
+
+### Option 2: CLI Deploy
 
 1. **Install Vercel CLI** (if not already installed):
    ```bash
@@ -32,17 +65,11 @@
 
 ### After Initial Setup
 
-**Option 1: CLI Deploy**
-```bash
-npm run build
-vercel --prod
-```
-
-**Option 2: Git Push (Auto-Deploy)**
+**Git Push (Auto-Deploy)** - If connected to GitHub:
 ```bash
 git push origin main
 ```
-If you've connected GitHub to Vercel, it auto-deploys on push.
+Auto-deploys to production on push to `main`.
 
 ## Environment Variables
 
