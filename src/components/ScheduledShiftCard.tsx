@@ -7,8 +7,12 @@ interface ScheduledShiftCardProps {
 
 export default function ScheduledShiftCard({ shift }: ScheduledShiftCardProps) {
   const date = parseISO(shift.date);
-  const startTime = shift.scheduled_start ? parseISO(shift.scheduled_start) : parseISO(shift.actual_start);
-  const endTime = shift.scheduled_end ? parseISO(shift.scheduled_end) : parseISO(shift.actual_end);
+  const startTime = shift.scheduled_start 
+    ? parseISO(shift.scheduled_start) 
+    : (shift.actual_start ? parseISO(shift.actual_start) : new Date());
+  const endTime = shift.scheduled_end 
+    ? parseISO(shift.scheduled_end) 
+    : (shift.actual_end ? parseISO(shift.actual_end) : new Date());
 
   return (
     <div className="bg-surface border-l-4 border-accent rounded-lg p-4 mx-4 my-2 shadow-sm">

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { X, Clock, Coffee, LogOut, LogIn } from 'lucide-react';
 import { format } from 'date-fns';
+import type { Shift } from '../types';
 
 interface NFCClockModalProps {
   isOpen: boolean;
@@ -13,7 +14,7 @@ type ShiftState = 'clocked_out' | 'clocked_in' | 'on_lunch' | 'lunch_ended';
 export function NFCClockModal({ isOpen, onClose }: NFCClockModalProps) {
   const [loading, setLoading] = useState(true);
   const [shiftState, setShiftState] = useState<ShiftState>('clocked_out');
-  const [activeShift, setActiveShift] = useState<any>(null);
+  const [activeShift, setActiveShift] = useState<Shift | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
@@ -34,8 +35,8 @@ export function NFCClockModal({ isOpen, onClose }: NFCClockModalProps) {
       const today = format(new Date(), 'yyyy-MM-dd');
 
       // Get today's shift
-      const { data: shifts, error } = await supabase
-        .from('shifts')
+      const { data: shifts, error } = await (supabase
+        .from('shifts') as any)
         .select('*')
         .eq('user_id', user.id)
         .eq('date', today)
@@ -91,8 +92,8 @@ export function NFCClockModal({ isOpen, onClose }: NFCClockModalProps) {
       const now = new Date();
       const today = format(now, 'yyyy-MM-dd');
 
-      const { error } = await supabase
-        .from('shifts')
+      const { error } = await (supabase
+        .from('shifts') as any)
         .insert({
           user_id: user.id,
           date: today,
@@ -123,8 +124,8 @@ export function NFCClockModal({ isOpen, onClose }: NFCClockModalProps) {
     try {
       const now = new Date();
 
-      const { error } = await supabase
-        .from('shifts')
+      const { error } = await (supabase
+        .from('shifts') as any)
         .update({ lunch_start: now.toISOString() })
         .eq('id', activeShift.id);
 
@@ -147,8 +148,8 @@ export function NFCClockModal({ isOpen, onClose }: NFCClockModalProps) {
     try {
       const now = new Date();
 
-      const { error } = await supabase
-        .from('shifts')
+      const { error } = await (supabase
+        .from('shifts') as any)
         .update({ lunch_end: now.toISOString() })
         .eq('id', activeShift.id);
 
@@ -171,8 +172,8 @@ export function NFCClockModal({ isOpen, onClose }: NFCClockModalProps) {
     try {
       const now = new Date();
 
-      const { error } = await supabase
-        .from('shifts')
+      const { error } = await (supabase
+        .from('shifts') as any)
         .update({ actual_end: now.toISOString() })
         .eq('id', activeShift.id);
 
