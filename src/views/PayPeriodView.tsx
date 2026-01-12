@@ -162,7 +162,7 @@ export default function PayPeriodView() {
                     <div>
                       <p className="text-sm opacity-90 mb-1">Projected Take Home</p>
                       <p className="text-4xl md:text-5xl font-bold">${netPayDetails.netPay}</p>
-                      <p className="text-xs opacity-75 mt-1">After taxes (estimated)</p>
+                      <p className="text-xs opacity-75 mt-1">After taxes (includes scheduled shifts)</p>
                     </div>
                   </div>
                   

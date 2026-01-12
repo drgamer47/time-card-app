@@ -47,13 +47,12 @@ export function calculateShiftHours(shift: Shift): ShiftCalculation {
 
 /**
  * Calculate pay for a week (Sunday-Saturday)
- * Only counts actual shifts (not scheduled/future shifts)
+ * Includes both actual and scheduled shifts (for projected pay)
  */
 export function calculateWeekPay(shifts: Shift[]): WeeklyPay {
-  // Filter out scheduled shifts (only count actual shifts for pay)
-  const actualShifts = shifts.filter(shift => shift.actual_start && shift.actual_end);
-  
-  const totalPaidHours = actualShifts.reduce((sum, shift) => {
+  // Include all shifts (actual and scheduled) for projected pay calculation
+  // calculateShiftHours already handles both types correctly
+  const totalPaidHours = shifts.reduce((sum, shift) => {
     return sum + calculateShiftHours(shift).paidHours;
   }, 0);
   
