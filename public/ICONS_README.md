@@ -33,3 +33,4 @@ For now, the app will work without icons, but PWA installation may not work perf
 - Use high contrast
 - Test on both light and dark backgrounds
 
+

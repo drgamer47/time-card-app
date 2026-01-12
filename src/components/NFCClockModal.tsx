@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { X, Clock, Coffee, LogOut, LogIn } from 'lucide-react';
+import { useUser } from '../contexts/UserContext';
+import { X, Clock, Coffee, LogOut, LogIn, Smile, Meh, Angry, Laugh } from 'lucide-react';
 import { format } from 'date-fns';
 import type { Shift } from '../types';
 
@@ -12,22 +13,36 @@ interface NFCClockModalProps {
 type ShiftState = 'clocked_out' | 'clocked_in' | 'on_lunch' | 'lunch_ended';
 
 export function NFCClockModal({ isOpen, onClose }: NFCClockModalProps) {
+  const { currentUser } = useUser();
   const [loading, setLoading] = useState(true);
   const [shiftState, setShiftState] = useState<ShiftState>('clocked_out');
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [showClockOutConfirm, setShowClockOutConfirm] = useState(false);
+  const [showMoodPrompt, setShowMoodPrompt] = useState(false);
+  const [mood, setMood] = useState<string>('');
+  const [energyLevel, setEnergyLevel] = useState<number>(0);
+  const [justClockedOutShiftId, setJustClockedOutShiftId] = useState<string | null>(null);
+
+  // Mood options
+  const moodOptions = [
+    { emoji: '😫', label: 'Exhausted', icon: Angry, value: '😫' },
+    { emoji: '😐', label: 'Meh', icon: Meh, value: '😐' },
+    { emoji: '🙂', label: 'Okay', icon: Smile, value: '🙂' },
+    { emoji: '😊', label: 'Good', icon: Smile, value: '😊' },
+    { emoji: '😄', label: 'Great', icon: Laugh, value: '😄' },
+  ];
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && currentUser) {
       checkShiftStatus();
     }
-  }, [isOpen]);
+  }, [isOpen, currentUser]);
 
   const checkShiftStatus = async () => {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      if (!currentUser) {
         setLoading(false);
         return;
       }
@@ -38,7 +53,7 @@ export function NFCClockModal({ isOpen, onClose }: NFCClockModalProps) {
       const { data: shifts, error } = await (supabase
         .from('shifts') as any)
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_name', currentUser)
         .eq('date', today)
         .order('created_at', { ascending: false })
         .limit(1);
@@ -83,9 +98,8 @@ export function NFCClockModal({ isOpen, onClose }: NFCClockModalProps) {
   const handleClockIn = async () => {
     setActionLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        alert('You must be logged in');
+      if (!currentUser) {
+        alert('Please select a user first');
         return;
       }
 
@@ -95,7 +109,7 @@ export function NFCClockModal({ isOpen, onClose }: NFCClockModalProps) {
       const { error } = await (supabase
         .from('shifts') as any)
         .insert({
-          user_id: user.id,
+          user_name: currentUser,
           date: today,
           actual_start: now.toISOString(),
           actual_end: null,
@@ -167,6 +181,12 @@ export function NFCClockModal({ isOpen, onClose }: NFCClockModalProps) {
 
   const handleClockOut = async () => {
     if (!activeShift) return;
+    setShowClockOutConfirm(true);
+  };
+
+  const confirmClockOut = async () => {
+    if (!activeShift) return;
+    setShowClockOutConfirm(false);
     setActionLoading(true);
 
     try {
@@ -179,15 +199,55 @@ export function NFCClockModal({ isOpen, onClose }: NFCClockModalProps) {
 
       if (error) throw error;
 
-      await checkShiftStatus();
-      showSuccess('Clocked Out!');
-      setTimeout(onClose, 1500);
+      // Store the shift ID and show mood prompt
+      setJustClockedOutShiftId(activeShift.id);
+      setShowMoodPrompt(true);
+      setActionLoading(false);
     } catch (error) {
       console.error('Error clocking out:', error);
       alert('Failed to clock out');
+      setActionLoading(false);
+    }
+  };
+
+  const handleSaveMoodAndEnergy = async () => {
+    if (!justClockedOutShiftId) return;
+    setActionLoading(true);
+
+    try {
+      const { error } = await (supabase
+        .from('shifts') as any)
+        .update({
+          mood: mood || null,
+          energy_level: energyLevel || null,
+        })
+        .eq('id', justClockedOutShiftId);
+
+      if (error) throw error;
+
+      await checkShiftStatus();
+      showSuccess('Clocked Out!');
+      setShowMoodPrompt(false);
+      setMood('');
+      setEnergyLevel(0);
+      setJustClockedOutShiftId(null);
+      setTimeout(onClose, 1500);
+    } catch (error) {
+      console.error('Error saving mood/energy:', error);
+      alert('Failed to save mood/energy');
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const handleSkipMood = async () => {
+    setShowMoodPrompt(false);
+    setMood('');
+    setEnergyLevel(0);
+    setJustClockedOutShiftId(null);
+    await checkShiftStatus();
+    showSuccess('Clocked Out!');
+    setTimeout(onClose, 1500);
   };
 
   const showSuccess = (message: string) => {
@@ -205,7 +265,7 @@ export function NFCClockModal({ isOpen, onClose }: NFCClockModalProps) {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
         {/* Header */}
-        <div className="bg-primary text-white p-6 rounded-t-xl flex justify-between items-center" style={{ backgroundColor: '#0072CE' }}>
+        <div className="bg-primary text-white p-6 rounded-t-xl flex justify-between items-center">
           <div>
             <h2 className="text-2xl font-bold">Quick Clock</h2>
             <p className="text-sm opacity-90 mt-1">{format(new Date(), 'EEE, MMM d • h:mm a')}</p>
@@ -251,7 +311,7 @@ export function NFCClockModal({ isOpen, onClose }: NFCClockModalProps) {
                 <button
                   onClick={handleClockIn}
                   disabled={actionLoading}
-                  className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 rounded-lg flex items-center justify-center gap-3 transition-colors disabled:opacity-50"
+                  className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 rounded-lg flex items-center justify-center gap-3 transition-colors disabled:opacity-50 touch-manipulation min-h-[56px]"
                 >
                   <LogIn className="w-6 h-6" />
                   Clock In
@@ -263,7 +323,7 @@ export function NFCClockModal({ isOpen, onClose }: NFCClockModalProps) {
                   <button
                     onClick={handleStartLunch}
                     disabled={actionLoading}
-                    className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-lg flex items-center justify-center gap-3 transition-colors disabled:opacity-50"
+                    className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-lg flex items-center justify-center gap-3 transition-colors disabled:opacity-50 touch-manipulation min-h-[56px]"
                   >
                     <Coffee className="w-6 h-6" />
                     Start Lunch
@@ -272,7 +332,7 @@ export function NFCClockModal({ isOpen, onClose }: NFCClockModalProps) {
                   <button
                     onClick={handleClockOut}
                     disabled={actionLoading}
-                    className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-lg flex items-center justify-center gap-3 transition-colors disabled:opacity-50"
+                    className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-lg flex items-center justify-center gap-3 transition-colors disabled:opacity-50 touch-manipulation min-h-[56px]"
                   >
                     <LogOut className="w-6 h-6" />
                     Clock Out
@@ -284,7 +344,7 @@ export function NFCClockModal({ isOpen, onClose }: NFCClockModalProps) {
                 <button
                   onClick={handleEndLunch}
                   disabled={actionLoading}
-                  className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 rounded-lg flex items-center justify-center gap-3 transition-colors disabled:opacity-50"
+                  className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 rounded-lg flex items-center justify-center gap-3 transition-colors disabled:opacity-50 touch-manipulation min-h-[56px]"
                 >
                   <Clock className="w-6 h-6" />
                   End Lunch
@@ -295,7 +355,7 @@ export function NFCClockModal({ isOpen, onClose }: NFCClockModalProps) {
                 <button
                   onClick={handleClockOut}
                   disabled={actionLoading}
-                  className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-lg flex items-center justify-center gap-3 transition-colors disabled:opacity-50"
+                  className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-lg flex items-center justify-center gap-3 transition-colors disabled:opacity-50 touch-manipulation min-h-[56px]"
                 >
                   <LogOut className="w-6 h-6" />
                   Clock Out
@@ -332,6 +392,111 @@ export function NFCClockModal({ isOpen, onClose }: NFCClockModalProps) {
           )}
         </div>
       </div>
+      
+      {/* Clock Out Confirmation Modal */}
+      {showClockOutConfirm && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Clock Out?</h3>
+            <p className="text-gray-600 mb-6">Are you sure you want to clock out?</p>
+            <div className="flex gap-3">
+              <button
+                onClick={confirmClockOut}
+                disabled={actionLoading}
+                className="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 touch-manipulation min-h-[44px]"
+              >
+                Yes, Clock Out
+              </button>
+              <button
+                onClick={() => setShowClockOutConfirm(false)}
+                disabled={actionLoading}
+                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 touch-manipulation min-h-[44px]"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mood & Energy Prompt Modal */}
+      {showMoodPrompt && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-xl font-bold text-gray-900 mb-2">How was your shift?</h3>
+            <p className="text-gray-600 mb-6 text-sm">Optional - you can skip this</p>
+            
+            {/* Mood Picker */}
+            <div className="mb-6">
+              <p className="text-sm font-medium text-gray-700 mb-3">Mood</p>
+              <div className="flex gap-2">
+                {moodOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setMood(option.value)}
+                    className={`flex-1 py-3 px-2 rounded-lg border-2 transition-all ${
+                      mood === option.value
+                        ? 'border-primary bg-primary/10'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="text-2xl">{option.emoji}</div>
+                    <div className="text-xs text-gray-600 mt-1">{option.label}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Energy Level */}
+            <div className="mb-6">
+              <p className="text-sm font-medium text-gray-700 mb-3">Energy Level</p>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map((level) => (
+                  <button
+                    key={level}
+                    type="button"
+                    onClick={() => setEnergyLevel(level)}
+                    className={`flex-1 py-3 rounded-lg border-2 transition-all ${
+                      energyLevel === level
+                        ? 'border-primary bg-primary/10'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="text-xl font-bold text-gray-900">{level}</div>
+                    <div className="flex justify-center mt-1">
+                      {Array.from({ length: level }).map((_, i) => (
+                        <span key={i} className="text-yellow-400 text-xs">★</span>
+                      ))}
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-2 text-center">
+                1 = Drained | 5 = Energized
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={handleSkipMood}
+                disabled={actionLoading}
+                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 touch-manipulation min-h-[44px]"
+              >
+                Skip
+              </button>
+              <button
+                onClick={handleSaveMoodAndEnergy}
+                disabled={actionLoading}
+                className="flex-1 bg-primary hover:bg-primary/90 text-white font-semibold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 touch-manipulation min-h-[44px]"
+              >
+                {actionLoading ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

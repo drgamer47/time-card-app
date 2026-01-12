@@ -1,14 +1,173 @@
 @import "tailwindcss";
 
+/* Default/Walmart Theme (Macray) */
 :root {
   --color-primary: #0072CE;
+  --color-primary-10: rgba(0, 114, 206, 0.1);
+  --color-primary-20: rgba(0, 114, 206, 0.2);
+  --color-primary-30: rgba(0, 114, 206, 0.3);
+  --color-primary-90: rgba(0, 114, 206, 0.9);
   --color-accent: #14B8A6;
+  --color-accent-10: rgba(20, 184, 166, 0.1);
+  --color-accent-20: rgba(20, 184, 166, 0.2);
   --color-success: #10B981;
+  --color-success-10: rgba(16, 185, 129, 0.1);
+  --color-success-20: rgba(16, 185, 129, 0.2);
   --color-warning: #F59E0B;
   --color-background: #F9FAFB;
   --color-surface: #FFFFFF;
   --color-text-primary: #111827;
   --color-text-secondary: #6B7280;
+}
+
+/* Walmart Theme (explicit) */
+:root[data-theme='walmart'] {
+  --color-primary: #0072CE;
+  --color-primary-10: rgba(0, 114, 206, 0.1);
+  --color-primary-20: rgba(0, 114, 206, 0.2);
+  --color-primary-30: rgba(0, 114, 206, 0.3);
+  --color-primary-90: rgba(0, 114, 206, 0.9);
+  --color-accent: #14B8A6;
+  --color-accent-10: rgba(20, 184, 166, 0.1);
+  --color-accent-20: rgba(20, 184, 166, 0.2);
+  --color-success: #10B981;
+  --color-success-10: rgba(16, 185, 129, 0.1);
+  --color-success-20: rgba(16, 185, 129, 0.2);
+  --color-warning: #F59E0B;
+  --color-background: #F9FAFB;
+  --color-surface: #FFFFFF;
+  --color-text-primary: #111827;
+  --color-text-secondary: #6B7280;
+}
+
+/* Yenna Theme */
+:root[data-theme='yenna'] {
+  --color-primary: #C8A2C8; /* Lilac purple */
+  --color-primary-10: rgba(200, 162, 200, 0.1);
+  --color-primary-20: rgba(200, 162, 200, 0.2);
+  --color-primary-30: rgba(200, 162, 200, 0.5);
+  --color-primary-90: rgba(200, 162, 200, 0.9);
+  --color-accent: #FFB6C1; /* Baby pink */
+  --color-accent-10: rgba(255, 182, 193, 0.1);
+  --color-accent-20: rgba(255, 182, 193, 0.2);
+  --color-success: #D4A017; /* Darker golden yellow - better contrast */
+  --color-success-10: rgba(212, 160, 23, 0.1);
+  --color-success-20: rgba(212, 160, 23, 0.2);
+  --color-success-30: rgba(212, 160, 23, 0.3);
+  --color-success-40: rgba(212, 160, 23, 0.4);
+  --color-warning: #F59E0B;
+  --color-background: #F9FAFB;
+  --color-surface: #FFFFFF;
+  --color-text-primary: #111827;
+  --color-text-secondary: #6B7280;
+}
+
+/* Explicit utility classes for theme colors */
+.bg-primary {
+  background-color: var(--color-primary);
+}
+
+.text-primary {
+  color: var(--color-primary);
+}
+
+.border-primary {
+  border-color: var(--color-primary);
+}
+
+.bg-accent {
+  background-color: var(--color-accent);
+}
+
+.text-accent {
+  color: var(--color-accent);
+}
+
+.bg-success {
+  background-color: var(--color-success);
+}
+
+.text-success {
+  color: var(--color-success);
+}
+
+.bg-warning {
+  background-color: var(--color-warning);
+}
+
+.text-warning {
+  color: var(--color-warning);
+}
+
+.bg-background {
+  background-color: var(--color-background);
+}
+
+.bg-surface {
+  background-color: var(--color-surface);
+}
+
+.text-text-primary {
+  color: var(--color-text-primary);
+}
+
+.text-text-secondary {
+  color: var(--color-text-secondary);
+}
+
+/* Opacity variants - using CSS custom properties with alpha */
+.bg-primary\/10 {
+  background-color: var(--color-primary-10);
+}
+
+.bg-primary\/90 {
+  background-color: var(--color-primary-90);
+}
+
+.bg-accent\/10 {
+  background-color: var(--color-accent-10);
+}
+
+.bg-accent\/20 {
+  background-color: var(--color-accent-20);
+}
+
+/* Primary opacity variants */
+.bg-primary\/10 {
+  background-color: var(--color-primary-10);
+}
+
+.bg-primary\/20 {
+  background-color: var(--color-primary-20);
+}
+
+.bg-primary\/30 {
+  background-color: var(--color-primary-30);
+}
+
+.border-primary\/20 {
+  border-color: var(--color-primary-20);
+}
+
+/* Success opacity variants */
+.bg-success\/10 {
+  background-color: var(--color-success-10);
+}
+
+.bg-success\/20 {
+  background-color: var(--color-success-20);
+}
+
+.bg-success\/30 {
+  background-color: var(--color-success-30);
+}
+
+.border-success\/20 {
+  border-color: var(--color-success-20);
+}
+
+.border-success\/40 {
+  border-color: var(--color-success-40);
 }
 
 * {
@@ -28,4 +187,33 @@ body {
 
 #root {
   min-height: 100vh;
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.animate-slide-down {
+  animation: slide-down 0.3s ease-out;
+}
+
+/* Pulse animation for timer when under 2 minutes */
+@keyframes pulse-urgent {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+  }
+}
+
+.timer-urgent {
+  animation: pulse-urgent 2s infinite;
 }

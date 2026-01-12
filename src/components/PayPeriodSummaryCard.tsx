@@ -47,7 +47,7 @@ export default function PayPeriodSummaryCard({
             {periodPay.expectedPaidHours > 0 && (
               <div className="flex justify-between items-center">
                 <span className="text-text-secondary">Hours Expected</span>
-                <span className="font-semibold text-purple-700">
+                <span className="font-semibold text-primary">
                   {formatHours(periodPay.expectedPaidHours)}
                 </span>
               </div>

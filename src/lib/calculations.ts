@@ -1,9 +1,22 @@
-import { differenceInMinutes, startOfWeek, endOfWeek, startOfDay, subDays, addDays, differenceInDays } from 'date-fns';
+import { differenceInMinutes, startOfWeek, endOfWeek, startOfDay, subDays, addDays, differenceInDays, parseISO, format } from 'date-fns';
 import type { Shift, ShiftCalculation, WeeklyPay, PayPeriodPay } from '../types';
 
-const HOURLY_RATE = 14;
-const OT_RATE = 21;
+// Get pay rate from localStorage or use default
+export function getPayRate(): number {
+  const stored = localStorage.getItem('payRate');
+  return stored ? parseFloat(stored) : 14;
+}
+
+export function setPayRate(rate: number): void {
+  localStorage.setItem('payRate', rate.toString());
+}
+
+const OT_RATE_MULTIPLIER = 1.5; // 1.5x for overtime
 const OT_THRESHOLD = 40;
+
+function getOvertimeRate(): number {
+  return getPayRate() * OT_RATE_MULTIPLIER;
+}
 
 /**
  * Calculate hours for a single shift
@@ -116,6 +129,7 @@ export function calculateExpectedShiftHours(shift: Shift): ShiftCalculation {
 /**
  * Calculate pay for a week (Sunday-Saturday)
  * Separates actual hours worked from expected/scheduled hours
+ * Includes holiday pay (1.5x multiplier) for shifts marked as holiday
  */
 export function calculateWeekPay(shifts: Shift[]): WeeklyPay {
   // Calculate actual hours (only shifts with actual_start and actual_end)
@@ -130,16 +144,49 @@ export function calculateWeekPay(shifts: Shift[]): WeeklyPay {
     return sum + calculateExpectedShiftHours(shift).paidHours;
   }, 0);
   
-  // Calculate pay for actual hours
+  // Calculate pay for actual hours, including holiday pay
+  const hourlyRate = getPayRate();
+  const otRate = getOvertimeRate();
+  
+  // Calculate pay for each shift, applying holiday multiplier where applicable
+  // Holiday pay = 1.5x base rate for all hours in that shift (applies to both regular and OT)
+  let totalPay = 0;
+  let regularHoursAccumulated = 0;
+  
+  actualShifts.forEach(shift => {
+    const shiftHours = calculateActualShiftHours(shift).paidHours;
+    const isHoliday = shift.is_holiday === true;
+    const holidayMultiplier = isHoliday ? 1.5 : 1;
+    
+    // Determine if this shift contributes to regular or OT hours
+    const hoursBeforeThisShift = regularHoursAccumulated;
+    const hoursAfterThisShift = regularHoursAccumulated + shiftHours;
+    
+    if (hoursAfterThisShift <= OT_THRESHOLD) {
+      // All hours are regular
+      totalPay += shiftHours * hourlyRate * holidayMultiplier;
+      regularHoursAccumulated += shiftHours;
+    } else if (hoursBeforeThisShift >= OT_THRESHOLD) {
+      // All hours are OT - holiday pay still applies (1.5x base rate, not 2.25x)
+      totalPay += shiftHours * hourlyRate * holidayMultiplier * 1.5;
+    } else {
+      // Split between regular and OT
+      const regularPart = OT_THRESHOLD - hoursBeforeThisShift;
+      const otPart = shiftHours - regularPart;
+      totalPay += (regularPart * hourlyRate * holidayMultiplier) + (otPart * hourlyRate * holidayMultiplier * 1.5);
+      regularHoursAccumulated += shiftHours;
+    }
+  });
+  
   const regularHours = Math.min(totalPaidHours, OT_THRESHOLD);
   const otHours = Math.max(totalPaidHours - OT_THRESHOLD, 0);
-  const totalPay = (regularHours * HOURLY_RATE) + (otHours * OT_RATE);
   
   // Calculate expected pay (combining actual + expected hours for projection)
+  // Note: Expected pay doesn't include holiday multiplier for scheduled shifts
   const totalProjectedHours = totalPaidHours + expectedPaidHours;
   const projectedRegularHours = Math.min(totalProjectedHours, OT_THRESHOLD);
   const projectedOtHours = Math.max(totalProjectedHours - OT_THRESHOLD, 0);
-  const expectedPay = (projectedRegularHours * HOURLY_RATE) + (projectedOtHours * OT_RATE);
+  const expectedPay = (projectedRegularHours * hourlyRate) + (projectedOtHours * otRate);
   
   return { 
     regularHours, 
@@ -278,5 +325,78 @@ export function formatHours(hours: number): string {
     return `${wholeHours}h`;
   }
   return `${wholeHours}h ${minutes}m`;
+}
+
+/**
+ * Week earnings interface for best/worst week tracking
+ */
+export interface WeekEarnings {
+  weekStart: Date;
+  weekEnd: Date;
+  totalPay: number;
+  totalHours: number;
+}
+
+export type { WeekEarnings };
+
+/**
+ * Find best and worst earning weeks from shifts
+ */
+export function findBestAndWorstWeeks(shifts: Shift[]): {
+  best: WeekEarnings | null;
+  worst: WeekEarnings | null;
+} {
+  if (!shifts || shifts.length === 0) {
+    return { best: null, worst: null };
+  }
+
+  // Filter to only worked shifts (with actual_start and actual_end)
+  const workedShifts = shifts.filter(shift => shift.actual_start && shift.actual_end);
+
+  if (workedShifts.length === 0) {
+    return { best: null, worst: null };
+  }
+
+  // Group shifts by week
+  const weekMap = new Map<string, Shift[]>();
+
+  workedShifts.forEach(shift => {
+    const shiftDate = parseISO(shift.date);
+    const weekBounds = getWeekBounds(shiftDate);
+    const weekKey = format(weekBounds.start, 'yyyy-MM-dd');
+
+    if (!weekMap.has(weekKey)) {
+      weekMap.set(weekKey, []);
+    }
+    weekMap.get(weekKey)!.push(shift);
+  });
+
+  // Calculate earnings for each week
+  const weekEarnings: WeekEarnings[] = [];
+
+  weekMap.forEach((weekShifts, weekKey) => {
+    const weekStart = parseISO(weekKey);
+    const weekEnd = addDays(weekStart, 6);
+    const { totalPay, totalPaidHours } = calculateWeekPay(weekShifts);
+
+    weekEarnings.push({
+      weekStart,
+      weekEnd,
+      totalPay,
+      totalHours: totalPaidHours,
+    });
+  });
+
+  if (weekEarnings.length === 0) {
+    return { best: null, worst: null };
+  }
+
+  // Find best and worst
+  const sorted = [...weekEarnings].sort((a, b) => b.totalPay - a.totalPay);
+
+  return {
+    best: sorted[0],
+    worst: sorted[sorted.length - 1],
+  };
 }
 

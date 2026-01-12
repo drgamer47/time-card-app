@@ -16,15 +16,9 @@ if (!supabaseUrl || !supabaseAnonKey) {
   }
 }
 
-// Create client with fallback empty strings (will fail gracefully)
+// Create client without auth (using simple user_name instead)
 export const supabase = createClient<Database>(
   supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseAnonKey || 'placeholder-key',
-  {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-    },
-  }
+  supabaseAnonKey || 'placeholder-key'
 );
 

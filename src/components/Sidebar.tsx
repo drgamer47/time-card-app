@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home as HomeIcon, Calendar as CalendarIcon, DollarSign as DollarSignIcon, PlusCircle as PlusCircleIcon } from 'lucide-react';
+import { Home as HomeIcon, Calendar as CalendarIcon, DollarSign as DollarSignIcon, PlusCircle as PlusCircleIcon, Settings as SettingsIcon } from 'lucide-react';
+import { UserSwitcher } from './UserSwitcher';
 
 export default function Sidebar() {
   const location = useLocation();
@@ -30,10 +31,9 @@ export default function Sidebar() {
                   to={item.path}
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-colors ${
                     isActive
-                      ? 'bg-gradient-to-r from-accent to-teal-600 text-white shadow-md'
+                      ? 'bg-accent text-white shadow-md'
                       : 'bg-accent/10 text-accent hover:bg-accent/20'
                   }`}
-                  style={isActive ? { background: 'linear-gradient(to right, #14B8A6, #0D9488)' } : {}}
                 >
                   <Icon className="w-5 h-5" />
                   <span>{item.label}</span>
@@ -57,6 +57,24 @@ export default function Sidebar() {
             );
           })}
         </nav>
+        
+        {/* Settings and User Switcher */}
+        <div className="p-4 border-t border-gray-200 space-y-2">
+          <Link
+            to="/settings"
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+              location.pathname === '/settings'
+                ? 'bg-primary/10 text-primary font-semibold'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <SettingsIcon className="w-5 h-5" />
+            <span>Settings</span>
+          </Link>
+          <div className="pt-2">
+            <UserSwitcher />
+          </div>
+        </div>
       </div>
     </aside>
   );

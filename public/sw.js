@@ -1,5 +1,5 @@
 // Service Worker for Hours Tracker PWA
-const CACHE_NAME = 'hours-tracker-v1';
+const CACHE_NAME = 'hours-tracker-v2';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -77,5 +77,21 @@ self.addEventListener('fetch', (event) => {
         return new Response('Network error', { status: 408 });
       })
   );
+});
+
+// Handle notification clicks
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  
+  event.waitUntil(
+    clients.openWindow('/')
+  );
+});
+
+// Keep service worker alive for timers
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'KEEP_ALIVE') {
+    event.ports[0].postMessage({ status: 'alive' });
+  }
 });
 

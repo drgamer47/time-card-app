@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { format } from 'date-fns';
 import { supabase } from '../lib/supabase';
+import { useUser } from '../contexts/UserContext';
 import ShiftForm from '../components/ShiftForm';
 import type { Shift } from '../types';
 
 export default function AddShiftView() {
   const navigate = useNavigate();
+  const { currentUser } = useUser();
   const [searchParams] = useSearchParams();
   const editId = searchParams.get('edit');
   
@@ -47,17 +50,12 @@ export default function AddShiftView() {
     }
   };
 
-  const handleSubmit = async (formData: Omit<Shift, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+  const handleSubmit = async (formData: Omit<Shift, 'id' | 'user_name' | 'created_at' | 'updated_at'>) => {
     try {
-      // Get current authenticated user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      if (!user || authError) {
-        alert('You must be signed in to add shifts. Please sign in and try again.');
+      if (!currentUser) {
+        alert('Please select a user first.');
         return;
       }
-
-      const userId = user.id;
 
       if (editId && shift) {
         // Update existing shift
@@ -71,6 +69,9 @@ export default function AddShiftView() {
             actual_end: formData.actual_end,
             lunch_start: formData.lunch_start,
             lunch_end: formData.lunch_end,
+            is_holiday: formData.is_holiday || false,
+            mood: formData.mood || null,
+            energy_level: formData.energy_level || null,
             notes: formData.notes,
             updated_at: new Date().toISOString(),
           })
@@ -87,7 +88,7 @@ export default function AddShiftView() {
         const { error } = await (supabase
           .from('shifts') as any)
           .insert({
-            user_id: userId,
+            user_name: currentUser,
             date: formData.date,
             scheduled_start: formData.scheduled_start,
             scheduled_end: formData.scheduled_end,
@@ -95,6 +96,9 @@ export default function AddShiftView() {
             actual_end: formData.actual_end,
             lunch_start: formData.lunch_start,
             lunch_end: formData.lunch_end,
+            is_holiday: formData.is_holiday || false,
+            mood: formData.mood || null,
+            energy_level: formData.energy_level || null,
             notes: formData.notes,
           });
 
@@ -127,6 +131,44 @@ export default function AddShiftView() {
     navigate(-1);
   };
 
+  const handleOffDay = async () => {
+    try {
+      if (!currentUser) {
+        alert('Please select a user first.');
+        return;
+      }
+
+      const today = new Date();
+      const dateStr = format(today, 'yyyy-MM-dd');
+
+      const { error } = await (supabase
+        .from('shifts') as any)
+        .insert({
+          user_name: currentUser,
+          date: dateStr,
+          scheduled_start: null,
+          scheduled_end: null,
+          actual_start: null,
+          actual_end: null,
+          lunch_start: null,
+          lunch_end: null,
+          status: 'day_off',
+          notes: 'Day off',
+        });
+
+      if (error) {
+        console.error('Error creating off day:', error);
+        alert('Failed to mark day off');
+      } else {
+        alert('Day off marked!');
+        navigate('/week');
+      }
+    } catch (err) {
+      console.error('Error:', err);
+      alert('An error occurred');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen pb-20 bg-background flex items-center justify-center">
@@ -145,6 +187,7 @@ export default function AddShiftView() {
           shift={shift}
           onSubmit={handleSubmit}
           onCancel={handleCancel}
+          onOffDay={handleOffDay}
         />
       </div>
     </div>

@@ -11,21 +11,27 @@ import {
   Plus as PlusIcon
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useUser } from '../contexts/UserContext';
 import { calculateWeekPay, getWeekBounds, calculateShiftHours, formatCurrency, formatHours } from '../lib/calculations';
 import { calculateNetPay } from '../lib/taxCalculations';
 import type { Shift } from '../types';
 
 export default function WeekView() {
   const navigate = useNavigate();
+  const { currentUser } = useUser();
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadShifts();
-  }, [currentWeek]);
+    if (currentUser) {
+      loadShifts();
+    }
+  }, [currentWeek, currentUser]);
 
   const loadShifts = async () => {
+    if (!currentUser) return;
+    
     setLoading(true);
     try {
       const { start, end } = getWeekBounds(currentWeek);
@@ -35,6 +41,7 @@ export default function WeekView() {
       const { data, error } = await supabase
         .from('shifts')
         .select('*')
+        .eq('user_name', currentUser)
         .gte('date', startStr)
         .lte('date', endStr)
         .order('date', { ascending: true })
@@ -53,7 +60,13 @@ export default function WeekView() {
   };
 
   const handleDelete = async (shiftId: string) => {
-    if (!confirm('Are you sure you want to delete this shift?')) {
+    const shift = shifts.find(s => s.id === shiftId);
+    const isDayOff = shift?.status === 'day_off';
+    const message = isDayOff 
+      ? 'Are you sure you want to delete this day off?' 
+      : 'Are you sure you want to delete this shift?';
+    
+    if (!confirm(message)) {
       return;
     }
 
@@ -111,7 +124,7 @@ export default function WeekView() {
   return (
     <div className="min-h-screen bg-gray-50 pb-24 md:pb-6 w-full">
       {/* Softer Header */}
-      <div className="bg-primary text-white px-6 py-6 md:py-8 shadow-md w-full" style={{ backgroundColor: '#0072CE' }}>
+      <div className="bg-primary text-white px-6 py-6 md:py-8 shadow-md w-full">
         <div className="max-w-2xl md:max-w-4xl mx-auto">
           <div className="flex items-center justify-between">
             <button 
@@ -184,21 +197,21 @@ export default function WeekView() {
                   </div>
                   
                   {weekPay.expectedPaidHours > 0 && (
-                    <div className="bg-purple-50 rounded-lg p-4 md:p-5 border border-purple-100 text-center">
-                      <p className="text-xs md:text-sm text-purple-700 mb-1">Hours Expected</p>
-                      <p className="text-2xl md:text-3xl font-bold text-purple-900">{formatHours(weekPay.totalPaidHours + weekPay.expectedPaidHours)}</p>
+                    <div className="rounded-lg p-4 md:p-5 text-center" style={{ backgroundColor: 'var(--color-primary-30)' }}>
+                      <p className="text-xs md:text-sm text-gray-800 mb-1 font-semibold">Hours Expected</p>
+                      <p className="text-2xl md:text-3xl font-bold text-gray-900">{formatHours(weekPay.totalPaidHours + weekPay.expectedPaidHours)}</p>
                     </div>
                   )}
                   
-                  <div className="bg-green-50 rounded-lg p-4 md:p-5 border border-green-100 text-center">
-                    <p className="text-xs md:text-sm text-green-700 mb-1">Gross Pay (Actual)</p>
-                    <p className="text-2xl md:text-3xl font-bold text-green-900">{formatCurrency(weekPay.totalPay)}</p>
+                  <div className="bg-success/30 rounded-lg p-4 md:p-5 text-center">
+                    <p className="text-xs md:text-sm text-gray-800 mb-1 font-semibold">Gross Pay (Actual)</p>
+                    <p className="text-2xl md:text-3xl font-bold text-gray-900">{formatCurrency(weekPay.totalPay)}</p>
                   </div>
                   
                   {weekPay.expectedPaidHours > 0 && (
-                    <div className="bg-green-50 rounded-lg p-4 md:p-5 border border-green-100 text-center">
-                      <p className="text-xs md:text-sm text-green-700 mb-1">Gross Pay (Expected)</p>
-                      <p className="text-2xl md:text-3xl font-bold text-green-900">{formatCurrency(weekPay.expectedPay)}</p>
+                    <div className="bg-success/30 rounded-lg p-4 md:p-5 text-center">
+                      <p className="text-xs md:text-sm text-gray-800 mb-1 font-semibold">Gross Pay (Expected)</p>
+                      <p className="text-2xl md:text-3xl font-bold text-gray-900">{formatCurrency(weekPay.expectedPay)}</p>
                     </div>
                   )}
                   
@@ -223,8 +236,8 @@ export default function WeekView() {
                   </div>
                   {weekPay.expectedPaidHours > 0 && (
                     <div className="flex justify-between">
-                      <span className="text-purple-600">Hours Expected</span>
-                      <span className="font-semibold text-purple-700">{formatHours(weekPay.totalPaidHours + weekPay.expectedPaidHours)}</span>
+                      <span className="text-primary">Hours Expected</span>
+                      <span className="font-semibold text-primary">{formatHours(weekPay.totalPaidHours + weekPay.expectedPaidHours)}</span>
                     </div>
                   )}
                   <div className="flex justify-between">
@@ -249,10 +262,10 @@ export default function WeekView() {
                     {weekPay.expectedPaidHours > 0 && (
                       <>
                         <div className="flex justify-between font-semibold pt-2 border-t border-gray-200">
-                          <span className="text-purple-600">Gross Pay (Expected)</span>
+                          <span className="text-primary">Gross Pay (Expected)</span>
                           <span className="text-success">{formatCurrency(weekPay.expectedPay)}</span>
                         </div>
-                        <div className="flex justify-between text-xs text-purple-500">
+                        <div className="flex justify-between text-xs text-primary">
                           <span>Take Home (Expected)</span>
                           <span className="font-semibold">${calculateNetPay(weekPay.expectedPay).netPay}</span>
                         </div>
@@ -301,10 +314,11 @@ export default function WeekView() {
 
                 {/* Shifts for this day */}
                 {dayShifts.map(shift => {
+                  const isDayOff = shift.status === 'day_off';
                   const shiftCalc = calculateShiftHours(shift);
                   const shiftPay = shiftCalc.paidHours * 14; // Base rate, OT calculated at week level
                   const lunchMinutes = Math.round(shiftCalc.lunchHours * 60);
-                  const isScheduled = !shift.actual_start;
+                  const isScheduled = !shift.actual_start && !isDayOff;
                   
                   // Get display time (actual or scheduled)
                   const startTime = shift.actual_start || shift.scheduled_start;
@@ -313,29 +327,60 @@ export default function WeekView() {
                   return (
                     <div 
                       key={shift.id}
-                      className="bg-white rounded-lg p-4 md:p-5 shadow-sm border-l-2 border-primary ml-4 md:ml-6"
+                      className={`bg-white rounded-lg p-4 md:p-5 shadow-sm border-l-2 ml-4 md:ml-6 ${
+                        isDayOff ? 'border-gray-400' : 'border-primary'
+                      }`}
                     >
                       <div className="flex justify-between items-start mb-3">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <ClockIcon className="w-4 h-4 md:w-5 md:h-5 text-gray-500" />
-                          {startTime && endTime ? (
-                            <span className="font-semibold text-gray-900 md:text-lg">
-                              {format(parseISO(startTime), 'h:mma')} - {format(parseISO(endTime), 'h:mma')}
-                            </span>
+                        <div className="flex items-center gap-2 flex-wrap flex-1">
+                          {isDayOff ? (
+                            <>
+                              <CalendarIcon className="w-4 h-4 md:w-5 md:h-5 text-gray-500" />
+                              <span className="font-semibold text-gray-900 md:text-lg">Day Off</span>
+                              <span className="bg-gray-100 text-gray-800 text-xs font-semibold px-2 py-1 rounded">
+                                Off Day
+                              </span>
+                            </>
                           ) : (
-                            <span className="font-semibold text-gray-500 md:text-lg">No time set</span>
-                          )}
-                          {isScheduled && (
-                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded">
-                              Scheduled
-                            </span>
-                          )}
-                          {!isScheduled && (
-                            <span className="bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded">
-                              Worked
-                            </span>
+                            <>
+                              <ClockIcon className="w-4 h-4 md:w-5 md:h-5 text-gray-500" />
+                              {startTime && endTime ? (
+                                <span className="font-semibold text-gray-900 md:text-lg">
+                                  {format(parseISO(startTime), 'h:mma')} - {format(parseISO(endTime), 'h:mma')}
+                                </span>
+                              ) : (
+                                <span className="font-semibold text-gray-500 md:text-lg">No time set</span>
+                              )}
+                              {isScheduled && (
+                                <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded">
+                                  Scheduled
+                                </span>
+                              )}
+                              {!isScheduled && (
+                                <span className="bg-success/20 text-success text-xs font-semibold px-2 py-1 rounded">
+                                  Worked
+                                </span>
+                              )}
+                            </>
                           )}
                         </div>
+                        
+                        {/* Mood & Energy Display */}
+                        {!isDayOff && !isScheduled && (shift.mood || shift.energy_level) && (
+                          <div className="flex gap-2 mr-2">
+                            {shift.mood && (
+                              <div className="bg-gray-50 px-3 py-1 rounded-full">
+                                <span className="text-lg">{shift.mood}</span>
+                              </div>
+                            )}
+                            {shift.energy_level && (
+                              <div className="bg-yellow-50 px-3 py-1 rounded-full flex items-center gap-1">
+                                <span className="text-xs font-semibold text-yellow-700">{shift.energy_level}</span>
+                                <span className="text-yellow-400 text-xs">★</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
                         
                         <div className="flex gap-2">
                           <button 
@@ -355,7 +400,8 @@ export default function WeekView() {
                         </div>
                       </div>
 
-                      {/* Hours Breakdown */}
+                      {/* Hours Breakdown - Only show for non-off days */}
+                      {!isDayOff && (
                       <div className="space-y-2 bg-gray-50 rounded p-3 text-sm mb-3">
                         <div className="flex justify-between">
                           <span className="text-gray-600">Total Shift</span>
@@ -374,13 +420,14 @@ export default function WeekView() {
                           <span className="font-bold text-blue-600">{formatHours(shiftCalc.paidHours)}</span>
                         </div>
                       </div>
+                      )}
 
                       {/* Pay Display - Only for actual shifts */}
-                      {!isScheduled && (
+                      {!isScheduled && !isDayOff && (
                         <div className="flex gap-2 md:gap-3 text-sm md:text-base">
-                          <div className="flex-1 bg-green-50 rounded p-2 md:p-3 text-center">
-                            <p className="text-green-700 text-xs md:text-sm">Pay</p>
-                            <p className="font-semibold text-green-900 md:text-lg">{formatCurrency(shiftPay)}</p>
+                          <div className="flex-1 bg-success/10 rounded p-2 md:p-3 text-center">
+                            <p className="text-success text-xs md:text-sm">Pay</p>
+                            <p className="font-semibold text-success md:text-lg">{formatCurrency(shiftPay)}</p>
                           </div>
                         </div>
                       )}

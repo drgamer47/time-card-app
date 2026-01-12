@@ -2,24 +2,31 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
 import { supabase } from '../lib/supabase';
+import { useUser } from '../contexts/UserContext';
 import ShiftCard from '../components/ShiftCard';
 import type { Shift } from '../types';
 
 export default function HistoryView() {
   const navigate = useNavigate();
+  const { currentUser } = useUser();
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadShifts();
-  }, []);
+    if (currentUser) {
+      loadShifts();
+    }
+  }, [currentUser]);
 
   const loadShifts = async () => {
+    if (!currentUser) return;
+    
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from('shifts')
         .select('*')
+        .eq('user_name', currentUser)
         .order('date', { ascending: false })
         .order('actual_start', { ascending: false })
         .limit(50);

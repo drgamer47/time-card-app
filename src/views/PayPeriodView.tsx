@@ -6,20 +6,26 @@ import {
   DollarSign as DollarSignIcon
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useUser } from '../contexts/UserContext';
 import { calculatePayPeriodPay, getPayPeriodBounds, getPayday, calculateShiftHours, formatCurrency, formatHours } from '../lib/calculations';
 import { calculateNetPay } from '../lib/taxCalculations';
 import type { Shift } from '../types';
 
 export default function PayPeriodView() {
+  const { currentUser } = useUser();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadShifts();
-  }, [currentDate]);
+    if (currentUser) {
+      loadShifts();
+    }
+  }, [currentDate, currentUser]);
 
   const loadShifts = async () => {
+    if (!currentUser) return;
+    
     setLoading(true);
     try {
       const { start, end } = getPayPeriodBounds(currentDate);
@@ -29,6 +35,7 @@ export default function PayPeriodView() {
       const { data, error } = await supabase
         .from('shifts')
         .select('*')
+        .eq('user_name', currentUser)
         .gte('date', startStr)
         .lte('date', endStr)
         .order('date', { ascending: true })
@@ -78,7 +85,7 @@ export default function PayPeriodView() {
   return (
     <div className="min-h-screen bg-gray-50 pb-24 md:pb-6 w-full">
       {/* Softer Header */}
-      <div className="bg-primary text-white px-6 py-6 md:py-8 shadow-md w-full" style={{ backgroundColor: '#0072CE' }}>
+      <div className="bg-primary text-white px-6 py-6 md:py-8 shadow-md w-full">
         <div className="max-w-2xl md:max-w-4xl mx-auto">
           <div className="flex items-center justify-between">
             <button 
@@ -151,27 +158,27 @@ export default function PayPeriodView() {
                   </div>
                   
                   {periodPay.expectedPaidHours > 0 && (
-                    <div className="bg-purple-50 rounded-lg p-4 md:p-5 border border-purple-100 text-center">
-                      <p className="text-sm text-purple-700 mb-1">Hours Expected</p>
-                      <p className="text-3xl md:text-4xl font-bold text-purple-900">{formatHours(periodPay.totalPaidHours + periodPay.expectedPaidHours)}</p>
+                    <div className="rounded-lg p-4 md:p-5 text-center" style={{ backgroundColor: 'var(--color-primary-30)' }}>
+                      <p className="text-sm text-gray-800 mb-1 font-semibold">Hours Expected</p>
+                      <p className="text-3xl md:text-4xl font-bold text-gray-900">{formatHours(periodPay.totalPaidHours + periodPay.expectedPaidHours)}</p>
                     </div>
                   )}
                   
-                  <div className="bg-green-50 rounded-lg p-4 md:p-5 border border-green-100 text-center">
-                    <p className="text-sm text-green-700 mb-1">Gross Pay (Actual)</p>
-                    <p className="text-3xl md:text-4xl font-bold text-green-900">{formatCurrency(periodPay.totalPay)}</p>
+                  <div className="bg-success/30 rounded-lg p-4 md:p-5 text-center">
+                    <p className="text-sm text-gray-800 mb-1 font-semibold">Gross Pay (Actual)</p>
+                    <p className="text-3xl md:text-4xl font-bold text-gray-900">{formatCurrency(periodPay.totalPay)}</p>
                   </div>
                   
                   {periodPay.expectedPaidHours > 0 && (
-                    <div className="bg-green-50 rounded-lg p-4 md:p-5 border border-green-100 text-center">
-                      <p className="text-sm text-green-700 mb-1">Gross Pay (Expected)</p>
-                      <p className="text-3xl md:text-4xl font-bold text-green-900">{formatCurrency(periodPay.expectedPay)}</p>
+                    <div className="bg-success/30 rounded-lg p-4 md:p-5 text-center">
+                      <p className="text-sm text-gray-800 mb-1 font-semibold">Gross Pay (Expected)</p>
+                      <p className="text-3xl md:text-4xl font-bold text-gray-900">{formatCurrency(periodPay.expectedPay)}</p>
                     </div>
                   )}
                 </div>
 
                 {/* Net Pay Card */}
-                <div className="bg-gradient-to-br from-green-700 to-green-800 rounded-xl p-5 md:p-6 text-white shadow-lg">
+                <div className="bg-success rounded-xl p-5 md:p-6 shadow-lg" style={{ backgroundColor: 'var(--color-success)', color: 'var(--color-text-primary)' }}>
                   <div className="flex justify-between items-start mb-4">
                     <div>
                       <p className="text-sm opacity-90 mb-1">Take Home (Actual)</p>
@@ -180,7 +187,7 @@ export default function PayPeriodView() {
                     </div>
                   </div>
                   {periodPay.expectedPaidHours > 0 && (
-                    <div className="mt-4 pt-4 border-t border-white/20">
+                    <div className="mt-4 pt-4 border-t border-black/20">
                       <p className="text-sm opacity-90 mb-1">Projected Take Home</p>
                       <p className="text-3xl md:text-4xl font-bold">${calculateNetPay(periodPay.expectedPay).netPay}</p>
                       <p className="text-xs opacity-75 mt-1">After taxes (includes scheduled shifts)</p>
@@ -238,7 +245,7 @@ export default function PayPeriodView() {
                           {formatHours(periodPay.week1.totalPaidHours)} worked
                         </span>
                         {periodPay.week1.expectedPaidHours > 0 && (
-                          <span className="bg-purple-100 text-purple-800 text-sm font-semibold px-3 py-1 rounded-full">
+                          <span className="bg-primary/20 text-primary text-sm font-semibold px-3 py-1 rounded-full">
                             {formatHours(periodPay.week1.totalPaidHours + periodPay.week1.expectedPaidHours)} expected
                           </span>
                         )}
@@ -258,7 +265,7 @@ export default function PayPeriodView() {
                       )}
                       <div className="border-t border-gray-200 pt-2 flex justify-between">
                         <span className="font-semibold text-gray-700">Week 1 Gross</span>
-                        <span className="font-bold text-green-600">${formatCurrency(periodPay.week1.totalPay)}</span>
+                        <span className="font-bold text-success">${formatCurrency(periodPay.week1.totalPay)}</span>
                       </div>
                       <div className="flex justify-between text-xs text-gray-500">
                         <span>Estimated Net</span>
@@ -278,7 +285,7 @@ export default function PayPeriodView() {
                           {formatHours(periodPay.week2.totalPaidHours)} worked
                         </span>
                         {periodPay.week2.expectedPaidHours > 0 && (
-                          <span className="bg-purple-100 text-purple-800 text-sm font-semibold px-3 py-1 rounded-full">
+                          <span className="bg-primary/20 text-primary text-sm font-semibold px-3 py-1 rounded-full">
                             {formatHours(periodPay.week2.totalPaidHours + periodPay.week2.expectedPaidHours)} expected
                           </span>
                         )}
@@ -298,7 +305,7 @@ export default function PayPeriodView() {
                       )}
                       <div className="border-t border-gray-200 pt-2 flex justify-between">
                         <span className="font-semibold text-gray-700">Week 2 Gross</span>
-                        <span className="font-bold text-green-600">${formatCurrency(periodPay.week2.totalPay)}</span>
+                        <span className="font-bold text-success">${formatCurrency(periodPay.week2.totalPay)}</span>
                       </div>
                       <div className="flex justify-between text-xs text-gray-500">
                         <span>Estimated Net</span>
@@ -351,7 +358,7 @@ export default function PayPeriodView() {
                   className="bg-white rounded-lg p-4 md:p-5 shadow-sm border-l-4 border-accent"
                 >
                   <div className="flex justify-between items-start mb-3">
-                    <div>
+                    <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <p className="font-bold text-gray-900 md:text-lg">
                           {format(parseISO(shift.date), 'EEE, MMM d')}
@@ -362,7 +369,7 @@ export default function PayPeriodView() {
                           </span>
                         )}
                         {!isScheduled && (
-                          <span className="bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded">
+                          <span className="bg-success/20 text-success text-xs font-semibold px-2 py-1 rounded">
                             Worked
                           </span>
                         )}
@@ -373,6 +380,23 @@ export default function PayPeriodView() {
                         </p>
                       )}
                     </div>
+                    
+                    {/* Mood & Energy Display */}
+                    {!isScheduled && (shift.mood || shift.energy_level) && (
+                      <div className="flex gap-2 mr-2">
+                        {shift.mood && (
+                          <div className="bg-gray-50 px-3 py-1 rounded-full">
+                            <span className="text-lg">{shift.mood}</span>
+                          </div>
+                        )}
+                        {shift.energy_level && (
+                          <div className="bg-yellow-50 px-3 py-1 rounded-full flex items-center gap-1">
+                            <span className="text-xs font-semibold text-yellow-700">{shift.energy_level}</span>
+                            <span className="text-yellow-400 text-xs">★</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     
                     {!isScheduled && (
                       <div className="text-right">

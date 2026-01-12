@@ -1,5 +1,5 @@
 import { format, parseISO } from 'date-fns';
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, Coffee } from 'lucide-react';
 import { calculateShiftHours, formatCurrency, formatHours } from '../lib/calculations';
 import type { Shift } from '../types';
 
@@ -22,11 +22,27 @@ export default function ShiftCard({ shift, onEdit, onDelete }: ShiftCardProps) {
   return (
     <div className="bg-surface rounded-lg p-4 border border-gray-200 shadow-sm">
       <div className="flex justify-between items-start mb-3">
-        <div>
+        <div className="flex-1">
           <div className="font-semibold text-lg">
             {format(date, 'EEEE, MMM d')}
           </div>
         </div>
+        {/* Mood & Energy Display */}
+        {!isScheduled && (shift.mood || shift.energy_level) && (
+          <div className="flex gap-2 mr-2">
+            {shift.mood && (
+              <div className="bg-gray-50 px-3 py-1 rounded-full">
+                <span className="text-lg">{shift.mood}</span>
+              </div>
+            )}
+            {shift.energy_level && (
+              <div className="bg-yellow-50 px-3 py-1 rounded-full flex items-center gap-1">
+                <span className="text-xs font-semibold text-yellow-700">{shift.energy_level}</span>
+                <span className="text-yellow-400 text-xs">★</span>
+              </div>
+            )}
+          </div>
+        )}
         <div className="flex gap-2">
           {onEdit && (
             <button
@@ -62,16 +78,29 @@ export default function ShiftCard({ shift, onEdit, onDelete }: ShiftCardProps) {
             </div>
           </>
         )}
+        <div className="flex gap-2 flex-wrap">
         {isScheduled && (
           <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded inline-block">
             Scheduled
           </span>
         )}
         {!isScheduled && (
-          <span className="bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded inline-block">
+          <span className="bg-success/20 text-success text-xs font-semibold px-2 py-1 rounded inline-block">
             Worked
           </span>
         )}
+          {shift.is_holiday && (
+            <span className="bg-amber-100 text-amber-800 text-xs font-semibold px-2 py-1 rounded inline-block">
+              🎉 Holiday Pay
+            </span>
+          )}
+          {!isScheduled && (shift as any).breaks_taken > 0 && (
+            <div className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+              <Coffee className="w-3 h-3" />
+              <span>{(shift as any).breaks_taken} break{(shift as any).breaks_taken !== 1 ? 's' : ''}</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Hours Breakdown */}

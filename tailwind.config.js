@@ -7,15 +7,15 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: '#0072CE',
-        accent: '#14B8A6',
-        success: '#10B981',
-        warning: '#F59E0B',
-        background: '#F9FAFB',
-        surface: '#FFFFFF',
+        primary: 'var(--color-primary)',
+        accent: 'var(--color-accent)',
+        success: 'var(--color-success)',
+        warning: 'var(--color-warning)',
+        background: 'var(--color-background)',
+        surface: 'var(--color-surface)',
         text: {
-          primary: '#111827',
-          secondary: '#6B7280',
+          primary: 'var(--color-text-primary)',
+          secondary: 'var(--color-text-secondary)',
         },
       },
     },

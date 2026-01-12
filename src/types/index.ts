@@ -1,6 +1,6 @@
 export interface Shift {
   id: string;
-  user_id: string;
+  user_name: string; // Changed from user_id
   date: string; // ISO date string
   scheduled_start: string | null; // ISO timestamp
   scheduled_end: string | null; // ISO timestamp
@@ -8,6 +8,11 @@ export interface Shift {
   actual_end: string | null; // ISO timestamp (null for scheduled/future shifts)
   lunch_start: string | null; // ISO timestamp
   lunch_end: string | null; // ISO timestamp
+  status?: string | null; // 'accepted', 'offered', 'day_off'
+  is_holiday?: boolean | null; // Holiday pay flag
+  mood?: string | null; // Mood emoji ('😫', '😐', '🙂', '😊', '😄')
+  energy_level?: number | null; // Energy level 1-5
+  breaks_taken?: number | null; // Number of breaks taken
   notes: string | null;
   created_at: string; // ISO timestamp
   updated_at: string; // ISO timestamp
