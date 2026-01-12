@@ -1,4 +1,4 @@
-# Setting Environment Variables in Vercel
+key: # Setting Environment Variables in Vercel
 
 ## Quick Fix for "Supabase URL and Anon Key must be set" Error
 
@@ -32,9 +32,10 @@ Click **"Add New"** and add these two variables:
 
 #### Variable 2: VITE_SUPABASE_ANON_KEY
 - **Name:** `VITE_SUPABASE_ANON_KEY`
-- **Value:** Your Supabase anon/public key
-  - Format: Long string starting with `eyJ...`
-  - Find it in: Supabase Dashboard → Settings → API → Project API keys → `anon` `public`
+- **Value:** Your Supabase **publishable key**
+  - Format: Starts with `sb_publishable_...`
+  - Find it in: Supabase Dashboard → Settings → API → **Publishable key** section
+  - Click the copy icon to copy the full key
 - **Environments:** Check all three:
   - ✅ Production
   - ✅ Preview
@@ -58,14 +59,16 @@ Click **"Add New"** and add these two variables:
 4. Click **API** in the settings menu
 5. You'll see:
    - **Project URL** → Use for `VITE_SUPABASE_URL`
-   - **Project API keys** → Use the `anon` `public` key for `VITE_SUPABASE_ANON_KEY`
+   - **Publishable key** section → Use the `sb_publishable_...` key for `VITE_SUPABASE_ANON_KEY`
+   - Note: Supabase now uses "Publishable keys" instead of the old "anon public" keys
 
 ### Option 2: Your Local .env File
 If you have a `.env` file locally, copy the values from there:
 ```env
 VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+VITE_SUPABASE_ANON_KEY=sb_publishable_NaUw1mnN2pkLErH5laTh1w_tyItNpin
 ```
+Note: The key format is now `sb_publishable_...` (not the old `eyJ...` JWT format)
 
 ## Verify It's Working
 
@@ -93,7 +96,7 @@ After redeploying:
 
 4. **Check the values:**
    - URL should start with `https://` and end with `.supabase.co`
-   - Key should be a long JWT token starting with `eyJ`
+   - Key should start with `sb_publishable_` (new format) or `eyJ` (old format - both work)
 
 ### Manifest.json 401 Error
 This is usually harmless - the manifest should still work. But if it's causing issues:
@@ -103,10 +106,10 @@ This is usually harmless - the manifest should still work. But if it's causing i
 
 ## Security Notes
 
-- ✅ The `anon` key is safe to expose in frontend code
+- ✅ The **publishable key** (`sb_publishable_...`) is safe to expose in frontend code
 - ✅ It's designed for client-side use
 - ✅ Your RLS (Row Level Security) policies protect your data
-- ❌ Never use the `service_role` key in frontend code
+- ❌ Never use the **secret key** (`sb_secret_...`) in frontend code - it's for backend only
 
 ## Quick Checklist
 
