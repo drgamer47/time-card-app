@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useUser } from '../contexts/UserContext';
-import { X, Clock, Coffee, LogOut, LogIn, Smile, Meh, Angry, Laugh } from 'lucide-react';
+import { useJob } from '../contexts/JobContext';
+import { X, Clock, Coffee, LogOut, LogIn, Smile, Meh, Angry, Laugh, Briefcase } from 'lucide-react';
 import { format } from 'date-fns';
 import type { Shift } from '../types';
 
@@ -14,12 +15,14 @@ type ShiftState = 'clocked_out' | 'clocked_in' | 'on_lunch' | 'lunch_ended';
 
 export function NFCClockModal({ isOpen, onClose }: NFCClockModalProps) {
   const { currentUser } = useUser();
+  const { jobs, selectedJob, setSelectedJob } = useJob();
   const [loading, setLoading] = useState(true);
   const [shiftState, setShiftState] = useState<ShiftState>('clocked_out');
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [showClockOutConfirm, setShowClockOutConfirm] = useState(false);
   const [showMoodPrompt, setShowMoodPrompt] = useState(false);
+  const [showJobSelector, setShowJobSelector] = useState(false);
   const [mood, setMood] = useState<string>('');
   const [energyLevel, setEnergyLevel] = useState<number>(0);
   const [justClockedOutShiftId, setJustClockedOutShiftId] = useState<string | null>(null);
@@ -95,7 +98,7 @@ export function NFCClockModal({ isOpen, onClose }: NFCClockModalProps) {
     }
   };
 
-  const handleClockIn = async () => {
+  const performClockIn = async (jobToUse: typeof selectedJob) => {
     setActionLoading(true);
     try {
       if (!currentUser) {
@@ -116,11 +119,13 @@ export function NFCClockModal({ isOpen, onClose }: NFCClockModalProps) {
           scheduled_start: now.toISOString(),
           scheduled_end: null,
           lunch_start: null,
-          lunch_end: null
+          lunch_end: null,
+          job: jobToUse?.job_name || null,
         });
 
       if (error) throw error;
 
+      setShowJobSelector(false);
       await checkShiftStatus();
       showSuccess('Clocked In!');
     } catch (error) {
@@ -129,6 +134,16 @@ export function NFCClockModal({ isOpen, onClose }: NFCClockModalProps) {
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const handleClockIn = async () => {
+    // If user has multiple jobs and hasn't selected one, show selector
+    if (jobs.length > 1 && !selectedJob) {
+      setShowJobSelector(true);
+      return;
+    }
+
+    await performClockIn(selectedJob);
   };
 
   const handleStartLunch = async () => {
@@ -306,8 +321,42 @@ export function NFCClockModal({ isOpen, onClose }: NFCClockModalProps) {
                 </div>
               </div>
 
+              {/* Job Selector */}
+              {showJobSelector && jobs.length > 1 && (
+                <div className="space-y-3 mb-4">
+                  <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                    <Briefcase className="w-4 h-4" />
+                    <span>Which job are you clocking in for?</span>
+                  </div>
+                  {jobs.map((job) => (
+                    <button
+                      key={job.job_name}
+                      onClick={() => {
+                        setSelectedJob(job);
+                        performClockIn(job);
+                      }}
+                      className="w-full bg-white border-2 border-gray-200 hover:border-primary text-left p-4 rounded-lg transition-colors"
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-semibold text-gray-900 capitalize">
+                            {job.job_name.replace('_', ' ')}
+                          </p>
+                          <p className="text-sm text-gray-600">${job.pay_rate}/hr</p>
+                        </div>
+                        {selectedJob?.job_name === job.job_name && (
+                          <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+                            <span className="text-white text-xs">✓</span>
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {/* Actions Based on State */}
-              {shiftState === 'clocked_out' && (
+              {shiftState === 'clocked_out' && !showJobSelector && (
                 <button
                   onClick={handleClockIn}
                   disabled={actionLoading}

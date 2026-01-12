@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { formatCurrency, formatHours, calculatePayPeriodPay } from '../lib/calculations';
 import type { Shift } from '../types';
@@ -15,7 +16,23 @@ export default function PayPeriodSummaryCard({
   payDate,
   shifts,
 }: PayPeriodSummaryCardProps) {
-  const periodPay = calculatePayPeriodPay(shifts);
+  const [periodPay, setPeriodPay] = useState<Awaited<ReturnType<typeof calculatePayPeriodPay>>>({
+    week1: { regularHours: 0, otHours: 0, totalPaidHours: 0, expectedPaidHours: 0, totalPay: 0, expectedPay: 0 },
+    week2: { regularHours: 0, otHours: 0, totalPaidHours: 0, expectedPaidHours: 0, totalPay: 0, expectedPay: 0 },
+    totalRegularHours: 0,
+    totalOtHours: 0,
+    totalPaidHours: 0,
+    expectedPaidHours: 0,
+    totalPay: 0,
+    expectedPay: 0,
+    payDate: new Date(),
+  });
+
+  useEffect(() => {
+    if (shifts.length >= 0) {
+      calculatePayPeriodPay(shifts).then(setPeriodPay);
+    }
+  }, [shifts]);
   const today = new Date();
   const daysUntilPayday = Math.ceil((payDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 

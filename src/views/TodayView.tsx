@@ -23,12 +23,28 @@ export default function TodayView({ onOpenNFCModal }: TodayViewProps = {}) {
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [streak, setStreak] = useState(0);
+  const [periodPay, setPeriodPay] = useState<Awaited<ReturnType<typeof calculatePayPeriodPay>>>({
+    week1: { regularHours: 0, otHours: 0, totalPaidHours: 0, expectedPaidHours: 0, totalPay: 0, expectedPay: 0 },
+    week2: { regularHours: 0, otHours: 0, totalPaidHours: 0, expectedPaidHours: 0, totalPay: 0, expectedPay: 0 },
+    totalRegularHours: 0,
+    totalOtHours: 0,
+    totalPaidHours: 0,
+    expectedPaidHours: 0,
+    totalPay: 0,
+    expectedPay: 0,
+    payDate: new Date(),
+  });
   
   const today = new Date();
   const todayStr = format(today, 'yyyy-MM-dd');
   const { start: periodStart, end: periodEnd } = getPayPeriodBounds(today);
   const payDate = getPayday(periodEnd);
-  const periodPay = calculatePayPeriodPay(periodShifts);
+
+  useEffect(() => {
+    if (periodShifts.length >= 0) {
+      calculatePayPeriodPay(periodShifts).then(setPeriodPay);
+    }
+  }, [periodShifts]);
 
   useEffect(() => {
     // Request notification permission on load

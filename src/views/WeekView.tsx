@@ -22,12 +22,26 @@ export default function WeekView() {
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(true);
+  const [weekPay, setWeekPay] = useState<ReturnType<typeof calculateWeekPay> extends Promise<infer T> ? T : never>({
+    regularHours: 0,
+    otHours: 0,
+    totalPaidHours: 0,
+    expectedPaidHours: 0,
+    totalPay: 0,
+    expectedPay: 0,
+  });
 
   useEffect(() => {
     if (currentUser) {
       loadShifts();
     }
   }, [currentWeek, currentUser]);
+
+  useEffect(() => {
+    if (currentUser && shifts.length >= 0) {
+      calculateWeekPay(shifts, currentUser).then(setWeekPay);
+    }
+  }, [shifts, currentUser]);
 
   const loadShifts = async () => {
     if (!currentUser) return;
@@ -89,7 +103,6 @@ export default function WeekView() {
   };
 
   const { start: weekStart, end: weekEnd } = getWeekBounds(currentWeek);
-  const weekPay = calculateWeekPay(shifts);
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
   const today = new Date();
   const isCurrentWeek = isSameDay(weekStart, getWeekBounds(today).start);
@@ -448,10 +461,14 @@ export default function WeekView() {
         {/* Quick Add Button */}
         <button
           onClick={() => navigate('/add')}
-          className="w-full bg-gradient-to-r from-primary/90 to-primary text-white font-semibold py-3 rounded-lg shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
+          className="w-full font-semibold py-3 rounded-lg shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
+          style={{ 
+            backgroundColor: '#0072CE',
+            color: 'white'
+          }}
         >
-          <PlusIcon className="w-5 h-5" />
-          Add Shift
+          <PlusIcon className="w-5 h-5" style={{ color: 'white' }} />
+          <span style={{ color: 'white' }}>Add Shift</span>
         </button>
       </div>
     </div>

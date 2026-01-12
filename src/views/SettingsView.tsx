@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useUser } from '../contexts/UserContext';
+import { useJob } from '../contexts/JobContext';
 import { supabase } from '../lib/supabase';
 import { UserSwitcher } from '../components/UserSwitcher';
-import { DollarSign, Palette } from 'lucide-react';
+import { DollarSign, Palette, Briefcase, Plus } from 'lucide-react';
 
 export default function SettingsView() {
   const { currentUser, theme, setThemeForUser } = useUser();
+  const { jobs, loadJobs } = useJob();
   const [payRate, setPayRate] = useState('14.00');
   const [loading, setLoading] = useState(false);
+  const [showAddJob, setShowAddJob] = useState(false);
+  const [newJobName, setNewJobName] = useState('');
+  const [newJobRate, setNewJobRate] = useState('');
 
   useEffect(() => {
     if (currentUser) {
@@ -193,6 +198,106 @@ export default function SettingsView() {
               </div>
             </button>
           </div>
+        </div>
+
+        {/* Jobs & Pay Rates */}
+        <div className="bg-white rounded-xl shadow-md p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-primary/10 p-2.5 rounded-lg">
+                <Briefcase className="w-5 h-5 text-primary" />
+              </div>
+              <h2 className="text-lg font-bold text-gray-900">Jobs & Pay Rates</h2>
+            </div>
+            <button
+              onClick={() => setShowAddJob(!showAddJob)}
+              className="text-primary hover:text-primary/80 font-semibold text-sm flex items-center gap-1"
+            >
+              <Plus className="w-4 h-4" />
+              Add Job
+            </button>
+          </div>
+
+          {/* Job List */}
+          <div className="space-y-3 mb-4">
+            {jobs.map((job) => (
+              <div key={job.job_name} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                <div>
+                  <p className="font-semibold text-gray-900 capitalize">
+                    {job.job_name.replace('_', ' ')}
+                  </p>
+                </div>
+                <p className="text-lg font-bold text-primary">${job.pay_rate}/hr</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Add Job Form */}
+          {showAddJob && (
+            <div className="border-t border-gray-200 pt-4 space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Job Name
+                </label>
+                <input
+                  type="text"
+                  value={newJobName}
+                  onChange={(e) => setNewJobName(e.target.value)}
+                  placeholder="e.g., Target, Starbucks"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Pay Rate
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-gray-500">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={newJobRate}
+                    onChange={(e) => setNewJobRate(e.target.value)}
+                    placeholder="14.00"
+                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  />
+                </div>
+              </div>
+              <button
+                onClick={async () => {
+                  if (!newJobName || !newJobRate || !currentUser) return;
+
+                  setLoading(true);
+                  try {
+                    const { error } = await supabase
+                      .from('user_jobs')
+                      .insert({
+                        user_name: currentUser,
+                        job_name: newJobName.toLowerCase().replace(/\s+/g, '_'),
+                        pay_rate: parseFloat(newJobRate),
+                      });
+
+                    if (error) throw error;
+
+                    setNewJobName('');
+                    setNewJobRate('');
+                    setShowAddJob(false);
+                    loadJobs();
+                    alert('Job added!');
+                  } catch (error) {
+                    console.error('Error adding job:', error);
+                    alert('Failed to add job');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                disabled={loading || !newJobName || !newJobRate}
+                className="w-full bg-primary text-white font-semibold py-2 rounded-lg hover:bg-primary/90 disabled:opacity-50"
+              >
+                Add Job
+              </button>
+            </div>
+          )}
         </div>
 
         {/* User Switcher */}

@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
 import { differenceInMinutes } from 'date-fns';
 import { Smile, Meh, Angry, Laugh } from 'lucide-react';
 import { formatCurrency, formatHours, getPayRate } from '../lib/calculations';
+import { useJob } from '../contexts/JobContext';
 import type { Shift } from '../types';
 
 interface ShiftFormProps {
@@ -13,10 +14,12 @@ interface ShiftFormProps {
 }
 
 export default function ShiftForm({ shift, onSubmit, onCancel, onOffDay }: ShiftFormProps) {
+  const { jobs, selectedJob } = useJob();
   const today = new Date();
   const defaultDate = shift ? parseISO(shift.date) : today;
   
   const [date, setDate] = useState(format(defaultDate, 'yyyy-MM-dd'));
+  const [shiftJob, setShiftJob] = useState<string>(shift?.job || selectedJob?.job_name || '');
   
   // Get time from actual_start or scheduled_start
   const getStartTime = (): string => {
@@ -45,6 +48,13 @@ export default function ShiftForm({ shift, onSubmit, onCancel, onOffDay }: Shift
   const [energyLevel, setEnergyLevel] = useState<number>(shift?.energy_level || 0);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Update shiftJob when selectedJob changes (for new shifts)
+  useEffect(() => {
+    if (!shift && selectedJob && !shiftJob) {
+      setShiftJob(selectedJob.job_name);
+    }
+  }, [selectedJob, shift, shiftJob]);
 
   // Mood options
   const moodOptions = [
@@ -100,10 +110,12 @@ export default function ShiftForm({ shift, onSubmit, onCancel, onOffDay }: Shift
   // Get pay rate and calculate shift pay with holiday multiplier
   // Use useMemo to ensure it recalculates when isHoliday changes
   const shiftPay = useMemo(() => {
-    const baseRate = getPayRate();
+    // Get pay rate for selected job, or fallback to default
+    const selectedJobObj = jobs.find(j => j.job_name === shiftJob);
+    const baseRate = selectedJobObj ? selectedJobObj.pay_rate : getPayRate();
     const holidayMultiplier = isHoliday ? 1.5 : 1;
     return paidHours * baseRate * holidayMultiplier;
-  }, [paidHours, isHoliday]);
+  }, [paidHours, isHoliday, shiftJob, jobs]);
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -206,6 +218,7 @@ export default function ShiftForm({ shift, onSubmit, onCancel, onOffDay }: Shift
       is_holiday: isHoliday,
       mood: isWorkedShift ? (mood || null) : null,
       energy_level: isWorkedShift ? (energyLevel || null) : null,
+      job: shiftJob || null,
       notes: notes || null,
     });
   };
@@ -225,6 +238,34 @@ export default function ShiftForm({ shift, onSubmit, onCancel, onOffDay }: Shift
           required
         />
       </div>
+
+      {/* Job Selector */}
+      {jobs.length > 1 && (
+        <div>
+          <label className="block text-sm font-medium text-text-primary mb-2">
+            Job
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            {jobs.map((job) => (
+              <button
+                key={job.job_name}
+                type="button"
+                onClick={() => setShiftJob(job.job_name)}
+                className={`p-3 rounded-lg border-2 transition-colors text-left ${
+                  shiftJob === job.job_name
+                    ? 'border-primary bg-primary/10'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <p className="font-semibold text-gray-900 capitalize">
+                  {job.job_name.replace('_', ' ')}
+                </p>
+                <p className="text-sm text-gray-600">${job.pay_rate}/hr</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <div>

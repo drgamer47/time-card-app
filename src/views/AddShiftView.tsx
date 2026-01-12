@@ -72,6 +72,7 @@ export default function AddShiftView() {
             is_holiday: formData.is_holiday || false,
             mood: formData.mood || null,
             energy_level: formData.energy_level || null,
+            job: formData.job || null,
             notes: formData.notes,
             updated_at: new Date().toISOString(),
           })
@@ -99,6 +100,7 @@ export default function AddShiftView() {
             is_holiday: formData.is_holiday || false,
             mood: formData.mood || null,
             energy_level: formData.energy_level || null,
+            job: formData.job || null,
             notes: formData.notes,
           });
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useSearchParams } from 'react-router-dom';
 import { UserProvider, useUser } from './contexts/UserContext';
 import { TimerProvider } from './contexts/TimerContext';
+import { JobProvider } from './contexts/JobContext';
 import { UserPicker } from './components/UserPicker';
 import BottomNav from './components/BottomNav';
 import Sidebar from './components/Sidebar';
@@ -75,11 +76,13 @@ function AppContent() {
 function App() {
   return (
     <UserProvider>
-      <TimerProvider>
-        <BrowserRouter>
-          <AppContent />
-        </BrowserRouter>
-      </TimerProvider>
+      <JobProvider>
+        <TimerProvider>
+          <BrowserRouter>
+            <AppContent />
+          </BrowserRouter>
+        </TimerProvider>
+      </JobProvider>
     </UserProvider>
   );
 }

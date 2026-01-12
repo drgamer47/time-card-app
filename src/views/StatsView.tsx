@@ -31,7 +31,7 @@ export default function StatsView() {
         .order('date', { ascending: false });
 
       if (shifts) {
-        const { best, worst } = findBestAndWorstWeeks(shifts);
+        const { best, worst } = await findBestAndWorstWeeks(shifts);
         setBestWeek(best);
         setWorstWeek(worst);
       }

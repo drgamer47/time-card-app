@@ -1,4 +1,5 @@
 import { differenceInMinutes, startOfWeek, endOfWeek, startOfDay, subDays, addDays, differenceInDays, parseISO, format } from 'date-fns';
+import { supabase } from './supabase';
 import type { Shift, ShiftCalculation, WeeklyPay, PayPeriodPay } from '../types';
 
 // Get pay rate from localStorage or use default
@@ -9,6 +10,33 @@ export function getPayRate(): number {
 
 export function setPayRate(rate: number): void {
   localStorage.setItem('payRate', rate.toString());
+}
+
+// Get pay rate for a specific shift's job
+export async function getPayRateForShift(userName: string, jobName: string | null | undefined): Promise<number> {
+  if (!jobName) {
+    // Fallback to default rate if no job specified
+    return getPayRate();
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('user_jobs')
+      .select('pay_rate')
+      .eq('user_name', userName)
+      .eq('job_name', jobName)
+      .single();
+
+    if (error || !data) {
+      // Fallback to default rate if job not found
+      return getPayRate();
+    }
+
+    return parseFloat(data.pay_rate.toString());
+  } catch (error) {
+    console.error('Error getting pay rate for shift:', error);
+    return getPayRate();
+  }
 }
 
 const OT_RATE_MULTIPLIER = 1.5; // 1.5x for overtime
@@ -130,8 +158,9 @@ export function calculateExpectedShiftHours(shift: Shift): ShiftCalculation {
  * Calculate pay for a week (Sunday-Saturday)
  * Separates actual hours worked from expected/scheduled hours
  * Includes holiday pay (1.5x multiplier) for shifts marked as holiday
+ * Uses job-specific pay rates per shift
  */
-export function calculateWeekPay(shifts: Shift[]): WeeklyPay {
+export async function calculateWeekPay(shifts: Shift[], userName: string): Promise<WeeklyPay> {
   // Calculate actual hours (only shifts with actual_start and actual_end)
   const actualShifts = shifts.filter(shift => shift.actual_start && shift.actual_end);
   const totalPaidHours = actualShifts.reduce((sum, shift) => {
@@ -144,19 +173,22 @@ export function calculateWeekPay(shifts: Shift[]): WeeklyPay {
     return sum + calculateExpectedShiftHours(shift).paidHours;
   }, 0);
   
-  // Calculate pay for actual hours, including holiday pay
-  const hourlyRate = getPayRate();
-  const otRate = getOvertimeRate();
+  // Get pay rates for all shifts (batch fetch for efficiency)
+  const shiftPayRates = await Promise.all(
+    actualShifts.map(shift => getPayRateForShift(userName, shift.job))
+  );
   
-  // Calculate pay for each shift, applying holiday multiplier where applicable
-  // Holiday pay = 1.5x base rate for all hours in that shift (applies to both regular and OT)
+  // Calculate pay for each shift individually with its own rate
   let totalPay = 0;
   let regularHoursAccumulated = 0;
   
-  actualShifts.forEach(shift => {
+  for (let i = 0; i < actualShifts.length; i++) {
+    const shift = actualShifts[i];
     const shiftHours = calculateActualShiftHours(shift).paidHours;
+    const payRate = shiftPayRates[i];
     const isHoliday = shift.is_holiday === true;
     const holidayMultiplier = isHoliday ? 1.5 : 1;
+    const effectiveRate = payRate * holidayMultiplier;
     
     // Determine if this shift contributes to regular or OT hours
     const hoursBeforeThisShift = regularHoursAccumulated;
@@ -164,29 +196,30 @@ export function calculateWeekPay(shifts: Shift[]): WeeklyPay {
     
     if (hoursAfterThisShift <= OT_THRESHOLD) {
       // All hours are regular
-      totalPay += shiftHours * hourlyRate * holidayMultiplier;
+      totalPay += shiftHours * effectiveRate;
       regularHoursAccumulated += shiftHours;
     } else if (hoursBeforeThisShift >= OT_THRESHOLD) {
-      // All hours are OT - holiday pay still applies (1.5x base rate, not 2.25x)
-      totalPay += shiftHours * hourlyRate * holidayMultiplier * 1.5;
+      // All hours are OT
+      totalPay += shiftHours * effectiveRate * 1.5;
     } else {
       // Split between regular and OT
       const regularPart = OT_THRESHOLD - hoursBeforeThisShift;
       const otPart = shiftHours - regularPart;
-      totalPay += (regularPart * hourlyRate * holidayMultiplier) + (otPart * hourlyRate * holidayMultiplier * 1.5);
+      totalPay += (regularPart * effectiveRate) + (otPart * effectiveRate * 1.5);
       regularHoursAccumulated += shiftHours;
     }
-  });
+  }
   
   const regularHours = Math.min(totalPaidHours, OT_THRESHOLD);
   const otHours = Math.max(totalPaidHours - OT_THRESHOLD, 0);
   
-  // Calculate expected pay (combining actual + expected hours for projection)
-  // Note: Expected pay doesn't include holiday multiplier for scheduled shifts
+  // Calculate expected pay (using default rate for scheduled shifts)
+  const defaultRate = getPayRate();
+  const defaultOtRate = getOvertimeRate();
   const totalProjectedHours = totalPaidHours + expectedPaidHours;
   const projectedRegularHours = Math.min(totalProjectedHours, OT_THRESHOLD);
   const projectedOtHours = Math.max(totalProjectedHours - OT_THRESHOLD, 0);
-  const expectedPay = (projectedRegularHours * hourlyRate) + (projectedOtHours * otRate);
+  const expectedPay = (projectedRegularHours * defaultRate) + (projectedOtHours * defaultOtRate);
   
   return { 
     regularHours, 
@@ -247,7 +280,7 @@ export function getPayday(periodEnd: Date): Date {
 /**
  * Calculate pay period pay (both weeks)
  */
-export function calculatePayPeriodPay(shifts: Shift[]): PayPeriodPay {
+export async function calculatePayPeriodPay(shifts: Shift[]): Promise<PayPeriodPay> {
   if (shifts.length === 0) {
     const today = new Date();
     const { end } = getPayPeriodBounds(today);
@@ -279,8 +312,10 @@ export function calculatePayPeriodPay(shifts: Shift[]): PayPeriodPay {
     return shiftDate > week1End;
   });
   
-  const week1 = calculateWeekPay(week1Shifts);
-  const week2 = calculateWeekPay(week2Shifts);
+  // Get userName from first shift (all shifts should have same user)
+  const userName = shifts.length > 0 ? shifts[0].user_name : '';
+  const week1 = await calculateWeekPay(week1Shifts, userName);
+  const week2 = await calculateWeekPay(week2Shifts, userName);
   
   const totalRegularHours = week1.regularHours + week2.regularHours;
   const totalOtHours = week1.otHours + week2.otHours;
@@ -340,10 +375,10 @@ export interface WeekEarnings {
 /**
  * Find best and worst earning weeks from shifts
  */
-export function findBestAndWorstWeeks(shifts: Shift[]): {
+export async function findBestAndWorstWeeks(shifts: Shift[]): Promise<{
   best: WeekEarnings | null;
   worst: WeekEarnings | null;
-} {
+}> {
   if (!shifts || shifts.length === 0) {
     return { best: null, worst: null };
   }
@@ -369,21 +404,22 @@ export function findBestAndWorstWeeks(shifts: Shift[]): {
     weekMap.get(weekKey)!.push(shift);
   });
 
-  // Calculate earnings for each week
-  const weekEarnings: WeekEarnings[] = [];
-
-  weekMap.forEach((weekShifts, weekKey) => {
+  // Calculate earnings for each week (using Promise.all for parallel execution)
+  const weekEarningsPromises = Array.from(weekMap.entries()).map(async ([weekKey, weekShifts]) => {
     const weekStart = parseISO(weekKey);
     const weekEnd = addDays(weekStart, 6);
-    const { totalPay, totalPaidHours } = calculateWeekPay(weekShifts);
+    const userName = weekShifts.length > 0 ? weekShifts[0].user_name : '';
+    const { totalPay, totalPaidHours } = await calculateWeekPay(weekShifts, userName);
 
-    weekEarnings.push({
+    return {
       weekStart,
       weekEnd,
       totalPay,
       totalHours: totalPaidHours,
-    });
+    };
   });
+
+  const weekEarnings = await Promise.all(weekEarningsPromises);
 
   if (weekEarnings.length === 0) {
     return { best: null, worst: null };

@@ -13,6 +13,7 @@ export interface Shift {
   mood?: string | null; // Mood emoji ('😫', '😐', '🙂', '😊', '😄')
   energy_level?: number | null; // Energy level 1-5
   breaks_taken?: number | null; // Number of breaks taken
+  job?: string | null; // Job name (e.g., 'walmart', '7brew')
   notes: string | null;
   created_at: string; // ISO timestamp
   updated_at: string; // ISO timestamp

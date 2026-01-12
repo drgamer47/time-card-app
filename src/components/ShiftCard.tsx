@@ -23,8 +23,15 @@ export default function ShiftCard({ shift, onEdit, onDelete }: ShiftCardProps) {
     <div className="bg-surface rounded-lg p-4 border border-gray-200 shadow-sm">
       <div className="flex justify-between items-start mb-3">
         <div className="flex-1">
-          <div className="font-semibold text-lg">
-            {format(date, 'EEEE, MMM d')}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="font-semibold text-lg">
+              {format(date, 'EEEE, MMM d')}
+            </div>
+            {shift.job && (
+              <span className="bg-primary/10 text-primary text-xs font-semibold px-2 py-0.5 rounded capitalize">
+                {shift.job.replace('_', ' ')}
+              </span>
+            )}
           </div>
         </div>
         {/* Mood & Energy Display */}

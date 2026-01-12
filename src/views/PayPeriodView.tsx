@@ -16,12 +16,29 @@ export default function PayPeriodView() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(true);
+  const [periodPay, setPeriodPay] = useState<Awaited<ReturnType<typeof calculatePayPeriodPay>>>({
+    week1: { regularHours: 0, otHours: 0, totalPaidHours: 0, expectedPaidHours: 0, totalPay: 0, expectedPay: 0 },
+    week2: { regularHours: 0, otHours: 0, totalPaidHours: 0, expectedPaidHours: 0, totalPay: 0, expectedPay: 0 },
+    totalRegularHours: 0,
+    totalOtHours: 0,
+    totalPaidHours: 0,
+    expectedPaidHours: 0,
+    totalPay: 0,
+    expectedPay: 0,
+    payDate: new Date(),
+  });
 
   useEffect(() => {
     if (currentUser) {
       loadShifts();
     }
   }, [currentDate, currentUser]);
+
+  useEffect(() => {
+    if (shifts.length >= 0) {
+      calculatePayPeriodPay(shifts).then(setPeriodPay);
+    }
+  }, [shifts]);
 
   const loadShifts = async () => {
     if (!currentUser) return;
@@ -54,7 +71,6 @@ export default function PayPeriodView() {
   };
 
   const { start: periodStart, end: periodEnd } = getPayPeriodBounds(currentDate);
-  const periodPay = calculatePayPeriodPay(shifts);
   const payday = getPayday(periodEnd);
   const today = new Date();
   const isCurrentPeriod = isSameDay(periodStart, getPayPeriodBounds(today).start);
