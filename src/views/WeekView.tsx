@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { calculateWeekPay, getWeekBounds, calculateShiftHours, formatCurrency, formatHours } from '../lib/calculations';
+import { calculateNetPay } from '../lib/taxCalculations';
 import type { Shift } from '../types';
 
 export default function WeekView() {
@@ -176,25 +177,56 @@ export default function WeekView() {
             {shifts.length > 0 ? (
               <div className="space-y-4">
                 {/* Lighter Stat Boxes */}
-                <div className="grid grid-cols-3 gap-3 md:gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
                   <div className="bg-blue-50 rounded-lg p-4 md:p-5 border border-blue-100 text-center">
-                    <p className="text-xs md:text-sm text-blue-700 mb-1">Total</p>
+                    <p className="text-xs md:text-sm text-blue-700 mb-1">Hours Worked</p>
                     <p className="text-2xl md:text-3xl font-bold text-blue-900">{formatHours(weekPay.totalPaidHours)}</p>
                   </div>
                   
-                  <div className="bg-purple-50 rounded-lg p-4 md:p-5 border border-purple-100 text-center">
-                    <p className="text-xs md:text-sm text-purple-700 mb-1">Regular</p>
-                    <p className="text-2xl md:text-3xl font-bold text-purple-900">{formatHours(weekPay.regularHours)}</p>
+                  {weekPay.expectedPaidHours > 0 && (
+                    <div className="bg-purple-50 rounded-lg p-4 md:p-5 border border-purple-100 text-center">
+                      <p className="text-xs md:text-sm text-purple-700 mb-1">Hours Expected</p>
+                      <p className="text-2xl md:text-3xl font-bold text-purple-900">{formatHours(weekPay.totalPaidHours + weekPay.expectedPaidHours)}</p>
+                    </div>
+                  )}
+                  
+                  <div className="bg-green-50 rounded-lg p-4 md:p-5 border border-green-100 text-center">
+                    <p className="text-xs md:text-sm text-green-700 mb-1">Gross Pay (Actual)</p>
+                    <p className="text-2xl md:text-3xl font-bold text-green-900">{formatCurrency(weekPay.totalPay)}</p>
                   </div>
                   
-                  <div className="bg-orange-50 rounded-lg p-4 md:p-5 border border-orange-100 text-center">
-                    <p className="text-xs md:text-sm text-orange-700 mb-1">OT</p>
-                    <p className="text-2xl md:text-3xl font-bold text-orange-900">{formatHours(weekPay.otHours)}</p>
+                  {weekPay.expectedPaidHours > 0 && (
+                    <div className="bg-green-50 rounded-lg p-4 md:p-5 border border-green-100 text-center">
+                      <p className="text-xs md:text-sm text-green-700 mb-1">Gross Pay (Expected)</p>
+                      <p className="text-2xl md:text-3xl font-bold text-green-900">{formatCurrency(weekPay.expectedPay)}</p>
+                    </div>
+                  )}
+                  
+                  <div className="bg-accent/10 rounded-lg p-4 md:p-5 border border-accent/20 text-center">
+                    <p className="text-xs md:text-sm text-accent mb-1">Take Home (Actual)</p>
+                    <p className="text-2xl md:text-3xl font-bold text-accent">${calculateNetPay(weekPay.totalPay).netPay}</p>
                   </div>
+                  
+                  {weekPay.expectedPaidHours > 0 && (
+                    <div className="bg-accent/10 rounded-lg p-4 md:p-5 border border-accent/20 text-center">
+                      <p className="text-xs md:text-sm text-accent mb-1">Take Home (Expected)</p>
+                      <p className="text-2xl md:text-3xl font-bold text-accent">${calculateNetPay(weekPay.expectedPay).netPay}</p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Pay Breakdown */}
                 <div className="bg-gray-50 rounded-lg p-4 border border-gray-100 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Hours Worked</span>
+                    <span className="font-semibold">{formatHours(weekPay.totalPaidHours)}</span>
+                  </div>
+                  {weekPay.expectedPaidHours > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-purple-600">Hours Expected</span>
+                      <span className="font-semibold text-purple-700">{formatHours(weekPay.totalPaidHours + weekPay.expectedPaidHours)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-gray-600">Regular</span>
                     <span className="font-semibold">{formatHours(weekPay.regularHours)} × $14 = {formatCurrency(weekPay.regularHours * 14)}</span>
@@ -205,9 +237,27 @@ export default function WeekView() {
                       <span className="font-semibold text-orange-700">{formatHours(weekPay.otHours)} × $21 = {formatCurrency(weekPay.otHours * 21)}</span>
                     </div>
                   )}
-                  <div className="border-t border-gray-200 pt-2 flex justify-between font-semibold">
-                    <span>Total Pay</span>
-                    <span className="text-success">{formatCurrency(weekPay.totalPay)}</span>
+                  <div className="border-t border-gray-200 pt-2 space-y-2">
+                    <div className="flex justify-between font-semibold">
+                      <span>Gross Pay (Actual)</span>
+                      <span className="text-success">{formatCurrency(weekPay.totalPay)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-500">
+                      <span>Take Home (Actual)</span>
+                      <span className="font-semibold">${calculateNetPay(weekPay.totalPay).netPay}</span>
+                    </div>
+                    {weekPay.expectedPaidHours > 0 && (
+                      <>
+                        <div className="flex justify-between font-semibold pt-2 border-t border-gray-200">
+                          <span className="text-purple-600">Gross Pay (Expected)</span>
+                          <span className="text-success">{formatCurrency(weekPay.expectedPay)}</span>
+                        </div>
+                        <div className="flex justify-between text-xs text-purple-500">
+                          <span>Take Home (Expected)</span>
+                          <span className="font-semibold">${calculateNetPay(weekPay.expectedPay).netPay}</span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

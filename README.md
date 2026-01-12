@@ -33,7 +33,7 @@ A mobile-first Progressive Web App for tracking work hours and calculating incom
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/drgamer47/time-card-app.git
+   https://github.com/drgamer47/time-card-app
    cd time-card-app
    ```
 

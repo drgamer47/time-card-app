@@ -152,19 +152,50 @@ export default function TodayView({ onOpenNFCModal }: TodayViewProps = {}) {
                     <p className="text-3xl md:text-4xl font-bold text-blue-900">{formatHours(periodPay.totalPaidHours)}</p>
                   </div>
                   
+                  {periodPay.expectedPaidHours > 0 && (
+                    <div className="bg-purple-50 rounded-lg p-4 md:p-5 border border-purple-100 text-center">
+                      <p className="text-sm text-purple-700 mb-1">Hours Expected</p>
+                      <p className="text-3xl md:text-4xl font-bold text-purple-900">{formatHours(periodPay.totalPaidHours + periodPay.expectedPaidHours)}</p>
+                    </div>
+                  )}
+                  
                   <div className="bg-green-50 rounded-lg p-4 md:p-5 border border-green-100 text-center">
-                    <p className="text-sm text-green-700 mb-1">Gross Pay</p>
+                    <p className="text-sm text-green-700 mb-1">Gross Pay (Actual)</p>
                     <p className="text-3xl md:text-4xl font-bold text-green-900">{formatCurrency(periodPay.totalPay)}</p>
                   </div>
                   
-                  <div className="bg-accent/10 rounded-lg p-4 md:p-5 border border-accent/20 text-center col-span-2 md:col-span-1">
-                    <p className="text-sm text-accent mb-1">Take Home</p>
+                  {periodPay.expectedPaidHours > 0 && (
+                    <div className="bg-green-50 rounded-lg p-4 md:p-5 border border-green-100 text-center">
+                      <p className="text-sm text-green-700 mb-1">Gross Pay (Expected)</p>
+                      <p className="text-3xl md:text-4xl font-bold text-green-900">{formatCurrency(periodPay.expectedPay)}</p>
+                    </div>
+                  )}
+                  
+                  <div className="bg-accent/10 rounded-lg p-4 md:p-5 border border-accent/20 text-center">
+                    <p className="text-sm text-accent mb-1">Take Home (Actual)</p>
                     <p className="text-3xl md:text-4xl font-bold text-accent">${calculateNetPay(periodPay.totalPay).netPay}</p>
                   </div>
+                  
+                  {periodPay.expectedPaidHours > 0 && (
+                    <div className="bg-accent/10 rounded-lg p-4 md:p-5 border border-accent/20 text-center">
+                      <p className="text-sm text-accent mb-1">Take Home (Expected)</p>
+                      <p className="text-3xl md:text-4xl font-bold text-accent">${calculateNetPay(periodPay.expectedPay).netPay}</p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Breakdown */}
                 <div className="bg-gray-50 rounded-lg p-4 border border-gray-100 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Hours Worked</span>
+                    <span className="font-semibold">{formatHours(periodPay.totalPaidHours)}</span>
+                  </div>
+                  {periodPay.expectedPaidHours > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-purple-600">Hours Expected</span>
+                      <span className="font-semibold text-purple-700">{formatHours(periodPay.totalPaidHours + periodPay.expectedPaidHours)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-gray-600">Regular</span>
                     <span className="font-semibold">{formatHours(periodPay.totalRegularHours)} × $14 = {formatCurrency(periodPay.totalRegularHours * 14)}</span>
@@ -175,15 +206,29 @@ export default function TodayView({ onOpenNFCModal }: TodayViewProps = {}) {
                       <span className="font-semibold text-orange-700">{formatHours(periodPay.totalOtHours)} × $21 = {formatCurrency(periodPay.totalOtHours * 21)}</span>
                     </div>
                   )}
-                  <div className="border-t border-gray-200 pt-2 flex justify-between items-center">
-                    <div>
-                      <span className="text-gray-600">Gross Pay</span>
-                      <p className="text-lg font-bold text-green-600">{formatCurrency(periodPay.totalPay)}</p>
+                  <div className="border-t border-gray-200 pt-2 space-y-2">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="text-gray-600">Gross Pay (Actual)</span>
+                        <p className="text-lg font-bold text-green-600">{formatCurrency(periodPay.totalPay)}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-gray-600">Take Home (Actual)</span>
+                        <p className="text-lg font-bold text-accent">${calculateNetPay(periodPay.totalPay).netPay}</p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <span className="text-gray-600">Take Home</span>
-                      <p className="text-lg font-bold text-accent">${calculateNetPay(periodPay.totalPay).netPay}</p>
-                    </div>
+                    {periodPay.expectedPaidHours > 0 && (
+                      <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                        <div>
+                          <span className="text-purple-600">Gross Pay (Expected)</span>
+                          <p className="text-lg font-bold text-green-600">{formatCurrency(periodPay.expectedPay)}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-purple-600">Take Home (Expected)</span>
+                          <p className="text-lg font-bold text-accent">${calculateNetPay(periodPay.expectedPay).netPay}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 

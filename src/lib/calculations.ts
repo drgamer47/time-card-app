@@ -46,21 +46,109 @@ export function calculateShiftHours(shift: Shift): ShiftCalculation {
 }
 
 /**
+ * Calculate actual hours for a shift (only if it has actual_start and actual_end)
+ */
+export function calculateActualShiftHours(shift: Shift): ShiftCalculation {
+  if (!shift.actual_start || !shift.actual_end) {
+    return { totalHours: 0, lunchHours: 0, paidHours: 0 };
+  }
+
+  const start = new Date(shift.actual_start);
+  const end = new Date(shift.actual_end);
+  
+  const totalMinutes = differenceInMinutes(end, start);
+  const totalHours = totalMinutes / 60;
+  
+  let lunchMinutes = 0;
+  if (shift.lunch_start && shift.lunch_end) {
+    const lunchStart = new Date(shift.lunch_start);
+    const lunchEnd = new Date(shift.lunch_end);
+    lunchMinutes = differenceInMinutes(lunchEnd, lunchStart);
+  }
+  
+  const lunchHours = lunchMinutes / 60;
+  const paidHours = (totalMinutes - lunchMinutes) / 60;
+  
+  return { 
+    totalHours: Number(totalHours.toFixed(2)), 
+    lunchHours: Number(lunchHours.toFixed(2)), 
+    paidHours: Number(paidHours.toFixed(2)) 
+  };
+}
+
+/**
+ * Calculate expected hours for a scheduled shift (only if it has scheduled times but no actual times)
+ */
+export function calculateExpectedShiftHours(shift: Shift): ShiftCalculation {
+  // Only calculate expected if it's a scheduled shift (has scheduled times but no actual_start)
+  if (shift.actual_start || !shift.scheduled_start || !shift.scheduled_end) {
+    return { totalHours: 0, lunchHours: 0, paidHours: 0 };
+  }
+
+  const start = new Date(shift.scheduled_start);
+  const end = new Date(shift.scheduled_end);
+  
+  const totalMinutes = differenceInMinutes(end, start);
+  const totalHours = totalMinutes / 60;
+  
+  // For scheduled shifts, assume lunch if scheduled times suggest it (e.g., 8+ hour shift)
+  // Or use scheduled lunch times if they exist
+  let lunchMinutes = 0;
+  if (shift.lunch_start && shift.lunch_end) {
+    const lunchStart = new Date(shift.lunch_start);
+    const lunchEnd = new Date(shift.lunch_end);
+    lunchMinutes = differenceInMinutes(lunchEnd, lunchStart);
+  } else if (totalHours >= 6) {
+    // Default 30 min lunch for shifts 6+ hours
+    lunchMinutes = 30;
+  }
+  
+  const lunchHours = lunchMinutes / 60;
+  const paidHours = (totalMinutes - lunchMinutes) / 60;
+  
+  return { 
+    totalHours: Number(totalHours.toFixed(2)), 
+    lunchHours: Number(lunchHours.toFixed(2)), 
+    paidHours: Number(paidHours.toFixed(2)) 
+  };
+}
+
+/**
  * Calculate pay for a week (Sunday-Saturday)
- * Includes both actual and scheduled shifts (for projected pay)
+ * Separates actual hours worked from expected/scheduled hours
  */
 export function calculateWeekPay(shifts: Shift[]): WeeklyPay {
-  // Include all shifts (actual and scheduled) for projected pay calculation
-  // calculateShiftHours already handles both types correctly
-  const totalPaidHours = shifts.reduce((sum, shift) => {
-    return sum + calculateShiftHours(shift).paidHours;
+  // Calculate actual hours (only shifts with actual_start and actual_end)
+  const actualShifts = shifts.filter(shift => shift.actual_start && shift.actual_end);
+  const totalPaidHours = actualShifts.reduce((sum, shift) => {
+    return sum + calculateActualShiftHours(shift).paidHours;
   }, 0);
   
+  // Calculate expected hours (scheduled shifts without actual_start)
+  const expectedShifts = shifts.filter(shift => !shift.actual_start && shift.scheduled_start && shift.scheduled_end);
+  const expectedPaidHours = expectedShifts.reduce((sum, shift) => {
+    return sum + calculateExpectedShiftHours(shift).paidHours;
+  }, 0);
+  
+  // Calculate pay for actual hours
   const regularHours = Math.min(totalPaidHours, OT_THRESHOLD);
   const otHours = Math.max(totalPaidHours - OT_THRESHOLD, 0);
   const totalPay = (regularHours * HOURLY_RATE) + (otHours * OT_RATE);
   
-  return { regularHours, otHours, totalPaidHours, totalPay };
+  // Calculate expected pay (combining actual + expected hours for projection)
+  const totalProjectedHours = totalPaidHours + expectedPaidHours;
+  const projectedRegularHours = Math.min(totalProjectedHours, OT_THRESHOLD);
+  const projectedOtHours = Math.max(totalProjectedHours - OT_THRESHOLD, 0);
+  const expectedPay = (projectedRegularHours * HOURLY_RATE) + (projectedOtHours * OT_RATE);
+  
+  return { 
+    regularHours, 
+    otHours, 
+    totalPaidHours, 
+    expectedPaidHours,
+    totalPay,
+    expectedPay
+  };
 }
 
 /**
@@ -117,12 +205,14 @@ export function calculatePayPeriodPay(shifts: Shift[]): PayPeriodPay {
     const today = new Date();
     const { end } = getPayPeriodBounds(today);
     return {
-      week1: { regularHours: 0, otHours: 0, totalPaidHours: 0, totalPay: 0 },
-      week2: { regularHours: 0, otHours: 0, totalPaidHours: 0, totalPay: 0 },
+      week1: { regularHours: 0, otHours: 0, totalPaidHours: 0, expectedPaidHours: 0, totalPay: 0, expectedPay: 0 },
+      week2: { regularHours: 0, otHours: 0, totalPaidHours: 0, expectedPaidHours: 0, totalPay: 0, expectedPay: 0 },
       totalRegularHours: 0,
       totalOtHours: 0,
       totalPaidHours: 0,
+      expectedPaidHours: 0,
       totalPay: 0,
+      expectedPay: 0,
       payDate: getPayday(end),
     };
   }
@@ -148,7 +238,9 @@ export function calculatePayPeriodPay(shifts: Shift[]): PayPeriodPay {
   const totalRegularHours = week1.regularHours + week2.regularHours;
   const totalOtHours = week1.otHours + week2.otHours;
   const totalPaidHours = week1.totalPaidHours + week2.totalPaidHours;
+  const expectedPaidHours = week1.expectedPaidHours + week2.expectedPaidHours;
   const totalPay = week1.totalPay + week2.totalPay;
+  const expectedPay = week1.expectedPay + week2.expectedPay;
   
   const { end: periodEnd } = getPayPeriodBounds(new Date(shifts[0].date));
   const payDate = getPayday(periodEnd);
@@ -159,7 +251,9 @@ export function calculatePayPeriodPay(shifts: Shift[]): PayPeriodPay {
     totalRegularHours,
     totalOtHours,
     totalPaidHours,
+    expectedPaidHours,
     totalPay,
+    expectedPay,
     payDate,
   };
 }

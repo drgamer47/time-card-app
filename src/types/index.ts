@@ -22,8 +22,10 @@ export interface ShiftCalculation {
 export interface WeeklyPay {
   regularHours: number;
   otHours: number;
-  totalPaidHours: number;
-  totalPay: number;
+  totalPaidHours: number; // Actual hours worked
+  expectedPaidHours: number; // Scheduled/expected hours
+  totalPay: number; // Actual gross pay
+  expectedPay: number; // Expected gross pay (actual + scheduled)
 }
 
 export interface PayPeriodPay {
@@ -31,8 +33,10 @@ export interface PayPeriodPay {
   week2: WeeklyPay;
   totalRegularHours: number;
   totalOtHours: number;
-  totalPaidHours: number;
-  totalPay: number;
+  totalPaidHours: number; // Actual hours worked
+  expectedPaidHours: number; // Scheduled/expected hours
+  totalPay: number; // Actual gross pay
+  expectedPay: number; // Expected gross pay (actual + scheduled)
   payDate: Date;
 }
 
