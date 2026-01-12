@@ -18,12 +18,13 @@ export async function requestNotificationPermission(): Promise<boolean> {
 
 export function showNotification(title: string, body: string) {
   if (Notification.permission === 'granted') {
-    new Notification(title, {
+    const options: NotificationOptions & { vibrate?: number[] } = {
       body,
       icon: '/icon-192.png',
       badge: '/icon-192.png',
       vibrate: [200, 100, 200],
-    } as NotificationOptions);
+    };
+    new Notification(title, options);
   }
 }
 

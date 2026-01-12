@@ -27,7 +27,7 @@ export default function StatsView() {
         .from('shifts')
         .select('*')
         .eq('user_name', currentUser)
-        .not('actual_start', 'is', null) // Only worked shifts
+        .not('actual_start', 'is', null as any) // Only worked shifts
         .order('date', { ascending: false });
 
       if (shifts) {
