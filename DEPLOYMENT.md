@@ -76,9 +76,22 @@ Auto-deploys to production on push to `main`.
 Set these in Vercel Dashboard → Project Settings → Environment Variables:
 
 - `VITE_SUPABASE_URL` - Your Supabase project URL
-- `VITE_SUPABASE_ANON_KEY` - Your Supabase anon/public key
+- `VITE_SUPABASE_ANON_KEY` - Your Supabase publishable key
+
+**CRITICAL:** Make sure to check **ALL THREE** environments:
+- ✅ Production (required for production domain)
+- ✅ Preview (required for preview deployments)
+- ✅ Development (required for local dev)
 
 **Important:** After adding env vars, redeploy for them to take effect.
+
+### Troubleshooting: Preview Works, Production Doesn't?
+
+This usually means environment variables aren't set for Production:
+1. Go to Settings → Environment Variables
+2. For each variable, make sure **Production** is checked ✅
+3. Redeploy the production deployment
+4. See `TROUBLESHOOTING.md` for more help
 
 ## Build Settings
 
