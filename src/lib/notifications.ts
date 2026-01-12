@@ -23,7 +23,7 @@ export function showNotification(title: string, body: string) {
       icon: '/icon-192.png',
       badge: '/icon-192.png',
       vibrate: [200, 100, 200],
-    });
+    } as NotificationOptions);
   }
 }
 

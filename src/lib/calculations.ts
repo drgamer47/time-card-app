@@ -337,8 +337,6 @@ export interface WeekEarnings {
   totalHours: number;
 }
 
-export type { WeekEarnings };
-
 /**
  * Find best and worst earning weeks from shifts
  */

@@ -4,7 +4,6 @@ import { supabase } from '../lib/supabase';
 import { findBestAndWorstWeeks, type WeekEarnings } from '../lib/calculations';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { format } from 'date-fns';
-import type { Shift } from '../types';
 
 export default function StatsView() {
   const { currentUser } = useUser();

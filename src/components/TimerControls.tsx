@@ -72,7 +72,7 @@ export function TimerControls() {
       const newBreaksTaken = breaksTaken + 1;
       const { error } = await supabase
         .from('shifts')
-        .update({ breaks_taken: newBreaksTaken })
+        .update({ breaks_taken: newBreaksTaken } as any)
         .eq('id', todayShift.id);
 
       if (!error) {
@@ -91,7 +91,7 @@ export function TimerControls() {
       const lunchStart = new Date().toISOString();
       const { error } = await supabase
         .from('shifts')
-        .update({ lunch_start: lunchStart })
+        .update({ lunch_start: lunchStart } as any)
         .eq('id', todayShift.id);
 
       if (error) {
