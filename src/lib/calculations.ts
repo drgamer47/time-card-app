@@ -20,8 +20,8 @@ export async function getPayRateForShift(userName: string, jobName: string | nul
   }
 
   try {
-    const { data, error } = await supabase
-      .from('user_jobs')
+    const { data, error } = await (supabase
+      .from('user_jobs') as any)
       .select('pay_rate')
       .eq('user_name', userName)
       .eq('job_name', jobName)

@@ -56,6 +56,29 @@ export interface Database {
           updated_at?: string;
         };
       };
+      user_jobs: {
+        Row: {
+          id: string;
+          user_name: string;
+          job_name: string;
+          pay_rate: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_name: string;
+          job_name: string;
+          pay_rate: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_name?: string;
+          job_name?: string;
+          pay_rate?: number;
+          created_at?: string;
+        };
+      };
     };
   };
 }

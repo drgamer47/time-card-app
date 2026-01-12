@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import { useUser } from './UserContext';
 
@@ -34,8 +35,8 @@ export function JobProvider({ children }: { children: ReactNode }) {
     if (!currentUser) return;
 
     try {
-      const { data, error } = await supabase
-        .from('user_jobs')
+      const { data, error } = await (supabase
+        .from('user_jobs') as any)
         .select('job_name, pay_rate')
         .eq('user_name', currentUser)
         .order('job_name');
@@ -52,9 +53,9 @@ export function JobProvider({ children }: { children: ReactNode }) {
         const savedJob = localStorage.getItem(`${currentUser}_selectedJob`);
         if (savedJob) {
           try {
-            const parsed = JSON.parse(savedJob);
+            const parsed = JSON.parse(savedJob) as Job;
             // Verify the saved job still exists in the jobs list
-            const found = data.find(j => j.job_name === parsed.job_name);
+            const found = data.find((j: Job) => j.job_name === parsed.job_name);
             if (found) {
               setSelectedJobState(found);
               return;

@@ -269,8 +269,8 @@ export default function SettingsView() {
 
                   setLoading(true);
                   try {
-                    const { error } = await supabase
-                      .from('user_jobs')
+                    const { error } = await (supabase
+                      .from('user_jobs') as any)
                       .insert({
                         user_name: currentUser,
                         job_name: newJobName.toLowerCase().replace(/\s+/g, '_'),
