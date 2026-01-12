@@ -18,6 +18,8 @@ export default function StatsView() {
   }, [currentUser]);
 
   const fetchStats = async () => {
+    if (!currentUser) return;
+    
     setLoading(true);
     try {
       // Get all shifts
