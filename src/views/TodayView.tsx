@@ -4,6 +4,7 @@ import { Plus as PlusIcon, Calendar as CalendarIcon, Clock as ClockIcon, Zap } f
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getPayPeriodBounds, getPayday, calculatePayPeriodPay, formatCurrency, formatHours, calculateShiftHours } from '../lib/calculations';
+import { calculateNetPay } from '../lib/taxCalculations';
 import type { Shift } from '../types';
 
 interface TodayViewProps {
@@ -22,7 +23,6 @@ export default function TodayView({ onOpenNFCModal }: TodayViewProps = {}) {
   const { start: periodStart, end: periodEnd } = getPayPeriodBounds(today);
   const payDate = getPayday(periodEnd);
   const periodPay = calculatePayPeriodPay(periodShifts);
-  const daysUntilPayday = Math.ceil((payDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
   useEffect(() => {
     // Update time immediately and then every minute
@@ -153,13 +153,13 @@ export default function TodayView({ onOpenNFCModal }: TodayViewProps = {}) {
                   </div>
                   
                   <div className="bg-green-50 rounded-lg p-4 md:p-5 border border-green-100 text-center">
-                    <p className="text-sm text-green-700 mb-1">Total Pay</p>
+                    <p className="text-sm text-green-700 mb-1">Gross Pay</p>
                     <p className="text-3xl md:text-4xl font-bold text-green-900">{formatCurrency(periodPay.totalPay)}</p>
                   </div>
                   
                   <div className="bg-accent/10 rounded-lg p-4 md:p-5 border border-accent/20 text-center col-span-2 md:col-span-1">
-                    <p className="text-sm text-accent mb-1">Days Until Pay</p>
-                    <p className="text-3xl md:text-4xl font-bold text-accent">{daysUntilPayday}</p>
+                    <p className="text-sm text-accent mb-1">Take Home</p>
+                    <p className="text-3xl md:text-4xl font-bold text-accent">${calculateNetPay(periodPay.totalPay).netPay}</p>
                   </div>
                 </div>
 
@@ -175,6 +175,16 @@ export default function TodayView({ onOpenNFCModal }: TodayViewProps = {}) {
                       <span className="font-semibold text-orange-700">{formatHours(periodPay.totalOtHours)} × $21 = {formatCurrency(periodPay.totalOtHours * 21)}</span>
                     </div>
                   )}
+                  <div className="border-t border-gray-200 pt-2 flex justify-between items-center">
+                    <div>
+                      <span className="text-gray-600">Gross Pay</span>
+                      <p className="text-lg font-bold text-green-600">{formatCurrency(periodPay.totalPay)}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-gray-600">Take Home</span>
+                      <p className="text-lg font-bold text-accent">${calculateNetPay(periodPay.totalPay).netPay}</p>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Pay Date - Still Colorful but Calmer */}

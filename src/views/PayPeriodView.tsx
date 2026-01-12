@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { calculatePayPeriodPay, getPayPeriodBounds, getPayday, calculateShiftHours, formatCurrency, formatHours } from '../lib/calculations';
+import { calculateNetPay } from '../lib/taxCalculations';
 import type { Shift } from '../types';
 
 export default function PayPeriodView() {
@@ -50,7 +51,11 @@ export default function PayPeriodView() {
   const payday = getPayday(periodEnd);
   const today = new Date();
   const isCurrentPeriod = isSameDay(periodStart, getPayPeriodBounds(today).start);
-  const daysUntilPayday = Math.ceil((payday.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  
+  // Calculate net pay
+  const netPayDetails = calculateNetPay(periodPay.totalPay);
+  const week1NetPay = calculateNetPay(periodPay.week1.totalPay);
+  const week2NetPay = calculateNetPay(periodPay.week2.totalPay);
 
   // Week boundaries
   const week1Start = periodStart;
@@ -139,7 +144,7 @@ export default function PayPeriodView() {
             {shifts.length > 0 ? (
               <div className="space-y-4 md:space-y-6">
                 {/* Lighter Stat Boxes */}
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+                <div className="grid grid-cols-2 gap-3 md:gap-4">
                   <div className="bg-blue-50 rounded-lg p-4 md:p-5 border border-blue-100 text-center">
                     <p className="text-sm text-blue-700 mb-1">Total Hours</p>
                     <p className="text-3xl md:text-4xl font-bold text-blue-900">{formatHours(periodPay.totalPaidHours)}</p>
@@ -149,11 +154,52 @@ export default function PayPeriodView() {
                     <p className="text-sm text-green-700 mb-1">Gross Pay</p>
                     <p className="text-3xl md:text-4xl font-bold text-green-900">{formatCurrency(periodPay.totalPay)}</p>
                   </div>
-                  
-                  <div className="bg-accent/10 rounded-lg p-4 md:p-5 border border-accent/20 text-center col-span-2 md:col-span-1">
-                    <p className="text-sm text-accent mb-1">Days Until Pay</p>
-                    <p className="text-3xl md:text-4xl font-bold text-accent">{daysUntilPayday}</p>
+                </div>
+
+                {/* Net Pay Card */}
+                <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-5 md:p-6 text-white shadow-lg">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <p className="text-sm opacity-90 mb-1">Projected Take Home</p>
+                      <p className="text-4xl md:text-5xl font-bold">${netPayDetails.netPay}</p>
+                      <p className="text-xs opacity-75 mt-1">After taxes (estimated)</p>
+                    </div>
                   </div>
+                  
+                  {/* Tax Breakdown - Collapsible */}
+                  <details className="mt-4">
+                    <summary className="cursor-pointer text-sm font-semibold bg-white/20 px-3 py-2 rounded hover:bg-white/30 transition-colors">
+                      View Tax Breakdown
+                    </summary>
+                    <div className="mt-3 space-y-2 text-sm bg-white/10 rounded-lg p-3">
+                      <div className="flex justify-between">
+                        <span className="opacity-90">Gross Pay</span>
+                        <span className="font-semibold">${netPayDetails.grossPay}</span>
+                      </div>
+                      <div className="border-t border-white/20 my-2"></div>
+                      <div className="flex justify-between opacity-90">
+                        <span>Federal Tax (~12%)</span>
+                        <span>-${netPayDetails.federal}</span>
+                      </div>
+                      <div className="flex justify-between opacity-90">
+                        <span>State Tax (3.05%)</span>
+                        <span>-${netPayDetails.state}</span>
+                      </div>
+                      <div className="flex justify-between opacity-90">
+                        <span>Social Security (6.2%)</span>
+                        <span>-${netPayDetails.socialSecurity}</span>
+                      </div>
+                      <div className="flex justify-between opacity-90">
+                        <span>Medicare (1.45%)</span>
+                        <span>-${netPayDetails.medicare}</span>
+                      </div>
+                      <div className="border-t border-white/20 my-2"></div>
+                      <div className="flex justify-between font-semibold">
+                        <span>Total Taxes</span>
+                        <span>-${netPayDetails.totalTax}</span>
+                      </div>
+                    </div>
+                  </details>
                 </div>
 
                 {/* Weekly Breakdown */}
@@ -182,6 +228,14 @@ export default function PayPeriodView() {
                           <span className="font-semibold text-orange-700">{formatHours(periodPay.week1.otHours)} × $21 = {formatCurrency(periodPay.week1.otHours * 21)}</span>
                         </div>
                       )}
+                      <div className="border-t border-gray-200 pt-2 flex justify-between">
+                        <span className="font-semibold text-gray-700">Week 1 Gross</span>
+                        <span className="font-bold text-green-600">${formatCurrency(periodPay.week1.totalPay)}</span>
+                      </div>
+                      <div className="flex justify-between text-xs text-gray-500">
+                        <span>Estimated Net</span>
+                        <span className="font-semibold">${week1NetPay.netPay}</span>
+                      </div>
                     </div>
                   </div>
 
@@ -207,6 +261,14 @@ export default function PayPeriodView() {
                           <span className="font-semibold text-orange-700">{formatHours(periodPay.week2.otHours)} × $21 = {formatCurrency(periodPay.week2.otHours * 21)}</span>
                         </div>
                       )}
+                      <div className="border-t border-gray-200 pt-2 flex justify-between">
+                        <span className="font-semibold text-gray-700">Week 2 Gross</span>
+                        <span className="font-bold text-green-600">${formatCurrency(periodPay.week2.totalPay)}</span>
+                      </div>
+                      <div className="flex justify-between text-xs text-gray-500">
+                        <span>Estimated Net</span>
+                        <span className="font-semibold">${week2NetPay.netPay}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
