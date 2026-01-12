@@ -70,9 +70,9 @@ export function TimerControls() {
     // Increment break counter in database
     if (todayShift) {
       const newBreaksTaken = breaksTaken + 1;
-      // @ts-ignore - breaks_taken column exists in DB but not in type definition
       const { error } = await supabase
         .from('shifts')
+        // @ts-ignore - breaks_taken column exists in DB but not in type definition
         .update({ breaks_taken: newBreaksTaken })
         .eq('id', todayShift.id);
 
@@ -90,9 +90,9 @@ export function TimerControls() {
     // Record lunch start time in database
     if (todayShift) {
       const lunchStart = new Date().toISOString();
-      // @ts-ignore - lunch_start column exists in DB but type may be outdated
       const { error } = await supabase
         .from('shifts')
+        // @ts-ignore - lunch_start column exists in DB but type may be outdated
         .update({ lunch_start: lunchStart })
         .eq('id', todayShift.id);
 
