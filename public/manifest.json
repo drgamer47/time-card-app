@@ -3,8 +3,9 @@
   "short_name": "Hours",
   "description": "Track work hours and calculate pay with overtime support",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#F9FAFB",
+  "background_color": "#0072CE",
   "theme_color": "#0072CE",
   "orientation": "portrait",
   "icons": [
@@ -33,5 +34,6 @@
     }
   ]
 }
+
 
 

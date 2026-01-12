@@ -142,3 +142,4 @@ You can also open the Quick Clock modal manually:
 Enjoy your smart clock in/out system! 🎉
 
 
+

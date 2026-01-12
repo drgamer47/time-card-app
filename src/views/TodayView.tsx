@@ -9,6 +9,7 @@ import { calculateNetPay } from '../lib/taxCalculations';
 import { calculateConsecutiveDaysStreak } from '../lib/streakCalculations';
 import { requestNotificationPermission } from '../lib/notifications';
 import { TimerControls } from '../components/TimerControls';
+import { NFCClockModal } from '../components/NFCClockModal';
 import type { Shift } from '../types';
 
 interface TodayViewProps {
@@ -23,6 +24,7 @@ export default function TodayView({ onOpenNFCModal }: TodayViewProps = {}) {
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [streak, setStreak] = useState(0);
+  const [showQuickClock, setShowQuickClock] = useState(false);
   const [periodPay, setPeriodPay] = useState<Awaited<ReturnType<typeof calculatePayPeriodPay>>>({
     week1: { regularHours: 0, otHours: 0, totalPaidHours: 0, expectedPaidHours: 0, totalPay: 0, expectedPay: 0 },
     week2: { regularHours: 0, otHours: 0, totalPaidHours: 0, expectedPaidHours: 0, totalPay: 0, expectedPay: 0 },
@@ -176,6 +178,21 @@ export default function TodayView({ onOpenNFCModal }: TodayViewProps = {}) {
 
       {/* Main Content */}
       <div className="max-w-2xl md:max-w-4xl mx-auto px-4 md:px-6 py-6 md:py-8 space-y-4 md:space-y-6">
+        {/* Quick Clock Button */}
+        <div className="max-w-2xl mx-auto">
+          <button
+            onClick={() => setShowQuickClock(true)}
+            className="w-full bg-gradient-to-r from-accent to-teal-600 text-white font-bold text-lg py-4 rounded-xl shadow-lg hover:shadow-accent/50 transition-all flex items-center justify-center gap-3"
+            style={{ 
+              background: 'linear-gradient(to right, var(--color-accent), #0d9488)',
+              color: 'white'
+            }}
+          >
+            <Zap className="w-6 h-6" />
+            Quick Clock
+          </button>
+        </div>
+
         {/* Streak Card */}
         {!loading && streak > 0 && (
           <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-xl p-5 text-white shadow-lg">
@@ -394,6 +411,12 @@ export default function TodayView({ onOpenNFCModal }: TodayViewProps = {}) {
           </div>
         )}
       </div>
+
+      {/* Quick Clock Modal */}
+      <NFCClockModal 
+        isOpen={showQuickClock} 
+        onClose={() => setShowQuickClock(false)} 
+      />
     </div>
   );
 }

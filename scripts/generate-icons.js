@@ -47,3 +47,4 @@ console.log('');
 console.log('Or install sharp and run: npm install sharp');
 console.log('Then I can update this script to generate PNGs directly.');
 
+

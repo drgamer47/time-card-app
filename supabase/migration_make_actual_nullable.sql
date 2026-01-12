@@ -4,3 +4,4 @@ ALTER TABLE shifts
   ALTER COLUMN actual_end DROP NOT NULL;
 
 
+
