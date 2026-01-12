@@ -24,13 +24,16 @@ function AppContent() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
-    // Check if opened via NFC tag
-    if (searchParams.get('nfc') === 'clock') {
+    // Check if opened via NFC tag or external link
+    const nfcParam = searchParams.get('nfc');
+    if (nfcParam === 'clock') {
       setShowNFCModal(true);
-      // Clean up URL
-      const newParams = new URLSearchParams(searchParams);
-      newParams.delete('nfc');
-      setSearchParams(newParams, { replace: true });
+      // Clean up URL after a short delay to allow modal to open
+      setTimeout(() => {
+        const newParams = new URLSearchParams(searchParams);
+        newParams.delete('nfc');
+        setSearchParams(newParams, { replace: true });
+      }, 100);
     }
   }, [searchParams, setSearchParams]);
 
