@@ -6,13 +6,25 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase URL and Anon Key must be set in environment variables');
+  const errorMsg = 'Supabase URL and Anon Key must be set in environment variables. ' +
+    'Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your Vercel project settings.';
+  console.error(errorMsg);
+  
+  // Show user-friendly error in production
+  if (import.meta.env.PROD) {
+    console.error('See VERCEL_ENV_SETUP.md for instructions on setting environment variables.');
+  }
 }
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-  },
-});
+// Create client with fallback empty strings (will fail gracefully)
+export const supabase = createClient<Database>(
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'placeholder-key',
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+    },
+  }
+);
 
