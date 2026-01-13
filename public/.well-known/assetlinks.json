@@ -5,5 +5,15 @@
       "namespace": "web",
       "site": "https://time-card-app-zeta.vercel.app"
     }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.macray.hourstracker",
+      "sha256_cert_fingerprints": [
+        "930C510AAA04F97766ABFEA369273DFCC88B2EE34E133BA57DAAF57BC1CDB8B2"
+      ]
+    }
   }
 ]
